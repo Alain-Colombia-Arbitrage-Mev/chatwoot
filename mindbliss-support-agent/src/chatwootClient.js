@@ -5,6 +5,7 @@ export class ChatwootClient {
     this.baseUrl = config.baseUrl;
     this.token = config.apiAccessToken;
     this.timeoutMs = config.timeoutMs;
+    this.forwardedProto = config.forwardedProto || '';
   }
 
   async recentMessages(accountId, conversationId) {
@@ -92,14 +93,17 @@ export class ChatwootClient {
   }
 
   request(path, { method = 'GET', body } = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      api_access_token: this.token
+    };
+    if (this.forwardedProto) headers['X-Forwarded-Proto'] = this.forwardedProto;
+
     return fetchJson(`${this.baseUrl}${path}`, {
       method,
       body,
       timeoutMs: this.timeoutMs,
-      headers: {
-        'Content-Type': 'application/json',
-        api_access_token: this.token
-      }
+      headers
     });
   }
 }

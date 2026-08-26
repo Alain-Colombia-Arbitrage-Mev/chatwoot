@@ -16,7 +16,8 @@ export function readConfig(env = process.env) {
       openOnEscalate: boolFrom(env.CHATWOOT_OPEN_ON_ESCALATE, true),
       teamMap: mapFrom(env.CHATWOOT_PRIORITY_TEAM_MAP || ''),
       labelPrefix: env.CHATWOOT_AI_LABEL_PREFIX || 'mb_ai',
-      notePrefix: env.CHATWOOT_AI_NOTE_PREFIX || 'Mindbliss AI'
+      notePrefix: env.CHATWOOT_AI_NOTE_PREFIX || 'Mindbliss AI',
+      forwardedProto: env.CHATWOOT_INTERNAL_FORWARDED_PROTO || 'https'
     },
     support: {
       url: stripTrailingSlash(env.VP_SUPPORT_AI_URL || 'http://host.docker.internal:9096'),

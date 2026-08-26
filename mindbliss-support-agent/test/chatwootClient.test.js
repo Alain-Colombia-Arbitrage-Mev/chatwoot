@@ -3,10 +3,10 @@ import test from 'node:test';
 import { ChatwootClient } from '../src/chatwootClient.js';
 
 test('conversationMessages explicitly sends after=0 for full-history imports', async () => {
-  const urls = [];
+  const requests = [];
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async url => {
-    urls.push(String(url));
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), headers: init.headers || {} });
     return new Response('{"payload":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
 
@@ -14,10 +14,12 @@ test('conversationMessages explicitly sends after=0 for full-history imports', a
     const client = new ChatwootClient({
       baseUrl: 'http://rails:3000',
       apiAccessToken: 'token',
-      timeoutMs: 1000
+      timeoutMs: 1000,
+      forwardedProto: 'https'
     });
     await client.conversationMessages(1, 55);
-    assert.match(urls[0], /after=0$/);
+    assert.match(requests[0].url, /after=0$/);
+    assert.equal(requests[0].headers['X-Forwarded-Proto'], 'https');
   } finally {
     globalThis.fetch = originalFetch;
   }
