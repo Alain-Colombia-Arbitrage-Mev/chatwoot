@@ -22,16 +22,16 @@ npm test
 
 ## Support EC2 deploy shape
 
-Run the service and its local memory stores only on the support EC2:
+Run the bridge only on the support EC2:
 
 ```bash
-docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml up -d \
-  mindbliss-qdrant mindbliss-falkordb mindbliss-support-agent
+docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml up -d mindbliss-support-agent
 ```
 
-The compose overlay binds Qdrant, FalkorDB and the bridge to `127.0.0.1` only. The containers
-share Chatwoot's compose network, so the bridge uses `http://mindbliss-qdrant:6333` and
-`redis://mindbliss-falkordb:6379` internally.
+The compose overlay joins Chatwoot's default network and the support-only `ai-memory_default`
+network. On soporte, Qdrant, FalkorDB, `vp-support` and `vp-kb-indexer` live in `/opt/ai-memory`;
+the bridge reaches them as `http://qdrant:6333`, `redis://falkordb:6379` and
+`http://vp-support:9096` inside that private Docker network.
 
 Check runtime wiring:
 
