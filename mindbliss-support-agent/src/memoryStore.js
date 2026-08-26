@@ -59,7 +59,6 @@ export class MemoryStore {
   vectorEnabled() {
     return Boolean(
       this.config.qdrantUrl &&
-      this.config.qdrantApiKey &&
       this.config.openRouterApiKey
     );
   }
@@ -83,9 +82,12 @@ export class MemoryStore {
           id: pointId,
           vector,
           payload: {
+            source: payload.source || 'chatwoot_webhook',
             account_id: Number(payload.account?.id) || null,
             conversation_id: String(payload.conversation?.id || ''),
             message_id: String(payload.id || ''),
+            chunk_index: Number.isFinite(payload.chunk_index) ? payload.chunk_index : null,
+            message_count: Number.isFinite(payload.message_count) ? payload.message_count : null,
             contact_hash: hash,
             category: triage.category,
             priority: triage.priority,
@@ -184,15 +186,53 @@ export class MemoryStore {
   }
 
   qdrant(path, { method = 'GET', body } = {}) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.config.qdrantApiKey) headers['api-key'] = this.config.qdrantApiKey;
     return fetchJson(`${this.config.qdrantUrl}${path}`, {
       method,
       body,
       timeoutMs: this.config.timeoutMs,
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': this.config.qdrantApiKey
-      }
+      headers
     });
+  }
+
+  async check({ external = false } = {}) {
+    if (!this.enabled()) return { enabled: false };
+    const checks = {};
+
+    if (this.vectorEnabled()) {
+      try {
+        await this.ensureCollection();
+        checks.qdrant = { status: 'ok', collection: this.config.collection };
+      } catch (error) {
+        checks.qdrant = { status: 'error', error: error.message };
+      }
+    } else {
+      checks.qdrant = { status: 'disabled' };
+    }
+
+    try {
+      checks.falkordb = await this.graph.check();
+    } catch (error) {
+      checks.falkordb = { status: 'error', error: error.message };
+    }
+
+    checks.reranker = {
+      status: this.config.rerankEnabled && this.config.openRouterApiKey ? 'configured' : 'disabled',
+      model: this.config.rerankModel
+    };
+
+    if (external && checks.reranker.status === 'configured') {
+      try {
+        await this.rerank('health check', [{ payload: { content: 'health check' } }]);
+        checks.reranker.status = 'ok';
+      } catch (error) {
+        checks.reranker = { ...checks.reranker, status: 'error', error: error.message };
+      }
+    }
+
+    const failed = Object.values(checks).some(check => check?.status === 'error');
+    return { enabled: true, status: failed ? 'error' : 'ok', checks };
   }
 }
 

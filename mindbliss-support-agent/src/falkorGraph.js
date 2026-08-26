@@ -47,6 +47,12 @@ export class GraphMemory {
     })).filter(item => item.payload.summary);
   }
 
+  async check() {
+    if (!this.enabled()) return { enabled: false };
+    await this.redis.command('PING');
+    return { enabled: true, status: 'ok', graph: this.graph };
+  }
+
   async store({ payload, contactHash, triage, supportResult, summary, content }) {
     if (!this.enabled()) return false;
     const accountId = Number(payload.account?.id) || 0;
@@ -65,6 +71,7 @@ export class GraphMemory {
       priority: triage.priority,
       support_reason: triage.reason,
       escalated: Boolean(supportResult?.escalate),
+      source: payload.source || 'chatwoot_webhook',
       summary,
       content,
       created_at: new Date().toISOString()
@@ -80,6 +87,7 @@ export class GraphMemory {
           msg.priority = $priority,
           msg.support_reason = $support_reason,
           msg.escalated = $escalated,
+          msg.source = $source,
           msg.summary = $summary,
           msg.content = $content,
           msg.created_at = $created_at

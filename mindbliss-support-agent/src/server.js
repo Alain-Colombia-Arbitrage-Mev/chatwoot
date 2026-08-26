@@ -2,15 +2,33 @@ import http from 'node:http';
 import { readConfig } from './config.js';
 import { getHeader, verifyChatwootSignature } from './security.js';
 import { WebhookProcessor } from './processor.js';
+import { ConversationImporter } from './conversationImporter.js';
 
 const config = readConfig();
 const processor = new WebhookProcessor(config);
+const importer = new ConversationImporter(config);
 
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/healthz') {
       return json(res, 200, { status: 'ok', memory: config.memory.enabled ? 'enabled' : 'disabled' });
     }
+    if (req.method === 'GET' && req.url.startsWith('/readyz')) {
+      const url = new URL(req.url, 'http://127.0.0.1');
+      const result = await processor.memory.check({ external: url.searchParams.get('external') === '1' });
+      return json(res, result.status === 'error' ? 503 : 200, result);
+    }
+
+    if (req.method === 'POST' && req.url === '/memory/import') {
+      if (!config.import.token || getBearerToken(req.headers) !== config.import.token) {
+        return json(res, 401, { error: 'invalid_import_token' });
+      }
+      const rawBody = await readBody(req, config.maxBodyBytes);
+      const options = rawBody ? JSON.parse(rawBody) : {};
+      const result = await importer.run(options);
+      return json(res, result.errors.length > 0 ? 207 : 200, result);
+    }
+
     if (req.method !== 'POST' || req.url !== '/webhooks/chatwoot') {
       return json(res, 404, { error: 'not_found' });
     }
@@ -52,4 +70,10 @@ async function readBody(req, maxBytes) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString('utf8');
+}
+
+function getBearerToken(headers) {
+  const auth = getHeader(headers, 'authorization');
+  if (auth.toLowerCase().startsWith('bearer ')) return auth.slice(7).trim();
+  return getHeader(headers, 'x-mindbliss-import-token');
 }

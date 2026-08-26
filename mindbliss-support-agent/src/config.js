@@ -23,6 +23,18 @@ export function readConfig(env = process.env) {
       token: env.VP_SUPPORT_AI_TOKEN || '',
       timeoutMs: intFrom(env.VP_SUPPORT_AI_TIMEOUT_MS, 45000)
     },
+    import: {
+      token: env.MEMORY_IMPORT_TOKEN || '',
+      accountId: intFrom(env.MEMORY_IMPORT_ACCOUNT_ID, 0),
+      status: env.MEMORY_IMPORT_STATUS || 'all',
+      supportOnly: boolFrom(env.MEMORY_IMPORT_SUPPORT_ONLY, true),
+      includePrivate: boolFrom(env.MEMORY_IMPORT_INCLUDE_PRIVATE, false),
+      maxPages: intFrom(env.MEMORY_IMPORT_MAX_PAGES, 25),
+      maxConversations: intFrom(env.MEMORY_IMPORT_MAX_CONVERSATIONS, 500),
+      maxMessagesPerConversation: intFrom(env.MEMORY_IMPORT_MAX_MESSAGES_PER_CONVERSATION, 300),
+      chunkMaxChars: intFrom(env.MEMORY_IMPORT_CHUNK_MAX_CHARS, 3000),
+      dryRun: boolFrom(env.MEMORY_IMPORT_DRY_RUN, false)
+    },
     memory: {
       enabled: boolFrom(env.MEMORY_ENABLED, true),
       qdrantUrl: stripTrailingSlash(env.QDRANT_URL || 'http://host.docker.internal:6333'),
@@ -45,15 +57,14 @@ export function readConfig(env = process.env) {
   };
 
   const missing = [];
-  if (!cfg.webhookSecret) missing.push('CHATWOOT_WEBHOOK_SECRET');
+  if (!secretPresent(cfg.webhookSecret)) missing.push('CHATWOOT_WEBHOOK_SECRET');
   if (!cfg.chatwoot.baseUrl) missing.push('CHATWOOT_BASE_URL');
-  if (!cfg.chatwoot.apiAccessToken) missing.push('CHATWOOT_API_ACCESS_TOKEN');
+  if (!secretPresent(cfg.chatwoot.apiAccessToken)) missing.push('CHATWOOT_API_ACCESS_TOKEN');
   if (!cfg.support.url) missing.push('VP_SUPPORT_AI_URL');
-  if (!cfg.support.token) missing.push('VP_SUPPORT_AI_TOKEN');
+  if (!secretPresent(cfg.support.token)) missing.push('VP_SUPPORT_AI_TOKEN');
   if (cfg.memory.enabled) {
-    if (!cfg.memory.openRouterApiKey) missing.push('OPENROUTER_API_KEY');
+    if (!secretPresent(cfg.memory.openRouterApiKey)) missing.push('OPENROUTER_API_KEY');
     if (!cfg.memory.qdrantUrl) missing.push('QDRANT_URL');
-    if (!cfg.memory.qdrantApiKey) missing.push('QDRANT_API_KEY');
     if (cfg.memory.falkorEnabled && !cfg.memory.falkorUrl) missing.push('FALKORDB_URL');
   }
   if (missing.length > 0) {
@@ -77,6 +88,11 @@ function boolFrom(value, fallback) {
   if (TRUE_VALUES.has(normalized)) return true;
   if (FALSE_VALUES.has(normalized)) return false;
   return fallback;
+}
+
+function secretPresent(value) {
+  const normalized = String(value || '').trim();
+  return Boolean(normalized && normalized !== 'CHANGE_ME');
 }
 
 function mapFrom(value) {

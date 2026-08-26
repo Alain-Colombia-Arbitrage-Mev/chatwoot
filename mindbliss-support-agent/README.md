@@ -7,7 +7,7 @@ Flow:
 1. Chatwoot sends a signed `message_created` webhook from the dedicated AgentBot.
 2. This bridge verifies `X-Chatwoot-Signature`.
 3. Non-support or private/outgoing messages are ignored.
-4. Support messages are sent to `vp-support`, which uses Qdrant + FalkorDB + OpenRouter rerank.
+4. Support messages are enriched with Qdrant + FalkorDB + OpenRouter rerank memory.
 5. The bridge adds labels, priority and a private note for the human support team.
 6. If enabled, it stores redacted vector memory in Qdrant and relation memory in FalkorDB.
 
@@ -22,14 +22,26 @@ npm test
 
 ## Support EC2 deploy shape
 
-Run the service only on the support EC2:
+Run the service and its local memory stores only on the support EC2:
 
 ```bash
-docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml up -d mindbliss-support-agent
+docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml up -d \
+  mindbliss-qdrant mindbliss-falkordb mindbliss-support-agent
 ```
 
-The compose overlay joins both Docker networks: Chatwoot's default network and the existing
-`ai-memory_default` network where `vp-support`, Qdrant and FalkorDB run.
+The compose overlay binds Qdrant, FalkorDB and the bridge to `127.0.0.1` only. The containers
+share Chatwoot's compose network, so the bridge uses `http://mindbliss-qdrant:6333` and
+`redis://mindbliss-falkordb:6379` internally.
+
+Check runtime wiring:
+
+```bash
+curl -fsS http://127.0.0.1:9108/healthz
+curl -fsS http://127.0.0.1:9108/readyz
+```
+
+`/readyz?external=1` also calls the configured reranker provider. Use it manually because it
+can consume paid OpenRouter/Cohere requests.
 
 Provision the AgentBot inside the Chatwoot Rails container:
 
@@ -37,4 +49,36 @@ Provision the AgentBot inside the Chatwoot Rails container:
 MINDBLISS_AGENT_ACCOUNT_ID=2 \
 MINDBLISS_AGENT_INBOX_IDS=all \
 bundle exec rails runner deployment/mindbliss_support_agent_setup.rb
+```
+
+## Import existing conversations
+
+Backfill historical support conversations into Qdrant and FalkorDB from the support EC2:
+
+```bash
+docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml exec \
+  mindbliss-support-agent node src/importConversations.js \
+  --account-id 1 \
+  --status all \
+  --max-conversations 500
+```
+
+The importer skips private notes by default and stores only chunks classified as support
+requests. To run a small dry run first:
+
+```bash
+docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml exec \
+  mindbliss-support-agent node src/importConversations.js \
+  --account-id 1 \
+  --max-conversations 10 \
+  --dry-run
+```
+
+The same importer is exposed over localhost for controlled operations:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:9108/memory/import \
+  -H "Authorization: Bearer $MEMORY_IMPORT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"account_id":1,"status":"all","max_conversations":100}'
 ```

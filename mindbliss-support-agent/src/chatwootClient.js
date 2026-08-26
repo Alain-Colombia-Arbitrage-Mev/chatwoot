@@ -13,6 +13,32 @@ export class ChatwootClient {
     return Array.isArray(data?.payload) ? data.payload : Array.isArray(data) ? data : [];
   }
 
+  async listConversations(accountId, { page = 1, status = 'all', inboxId, teamId } = {}) {
+    const query = new URLSearchParams({
+      page: String(page),
+      status,
+      assignee_type: 'all'
+    });
+    if (inboxId) query.set('inbox_id', String(inboxId));
+    if (teamId) query.set('team_id', String(teamId));
+
+    const data = await this.request(`/api/v1/accounts/${accountId}/conversations?${query}`);
+    const payload = data?.data?.payload || data?.payload || [];
+    const meta = data?.data?.meta || data?.meta || {};
+    return { payload: Array.isArray(payload) ? payload : [], meta };
+  }
+
+  async conversationMessages(accountId, conversationId, { after = 0 } = {}) {
+    const query = new URLSearchParams();
+    if (Number(after) >= 0) query.set('after', String(after));
+    const suffix = query.toString() ? `?${query}` : '';
+    const data = await this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}/messages${suffix}`);
+    return {
+      payload: Array.isArray(data?.payload) ? data.payload : Array.isArray(data) ? data : [],
+      meta: data?.meta || {}
+    };
+  }
+
   async hasNoteMarker(accountId, conversationId, marker) {
     const messages = await this.recentMessages(accountId, conversationId);
     return messages.some(message => message.private === true && String(message.content || '').includes(marker));
