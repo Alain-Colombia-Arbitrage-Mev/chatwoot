@@ -66,8 +66,11 @@ export class MemoryStore {
   async vectorRelated(payload, content) {
     const vector = await this.embed(`query: ${content}`);
     await this.ensureCollection();
-    const hits = await this.search(payload, vector);
-    if (!this.config.rerankEnabled || hits.length < 2) return hits;
+    const hits = dedupeMemories([
+      ...(await this.search(payload, vector).catch(() => [])),
+      ...(await this.searchAccountKnowledge(payload, vector).catch(() => []))
+    ]);
+    if (!this.config.rerankEnabled || hits.length < 2) return hits.slice(0, this.config.searchLimit);
     return this.rerank(content, hits).catch(() => hits);
   }
 
@@ -83,6 +86,9 @@ export class MemoryStore {
           vector,
           payload: {
             source: payload.source || 'chatwoot_webhook',
+            kb_scope: payload.kb_scope || null,
+            kb_title: payload.kb_title || null,
+            kb_tags: Array.isArray(payload.kb_tags) ? payload.kb_tags : [],
             account_id: Number(payload.account?.id) || null,
             conversation_id: String(payload.conversation?.id || ''),
             message_id: String(payload.id || ''),
@@ -154,6 +160,24 @@ export class MemoryStore {
           must: [
             { key: 'account_id', match: { value: Number(payload.account?.id) || 0 } },
             { key: 'contact_hash', match: { value: contactHash(payload) } }
+          ]
+        }
+      }
+    });
+    return Array.isArray(response?.result) ? response.result : [];
+  }
+
+  async searchAccountKnowledge(payload, vector) {
+    const response = await this.qdrant(`/collections/${encodeURIComponent(this.config.collection)}/points/search`, {
+      method: 'POST',
+      body: {
+        vector,
+        limit: this.config.searchLimit,
+        with_payload: true,
+        filter: {
+          must: [
+            { key: 'account_id', match: { value: Number(payload.account?.id) || 0 } },
+            { key: 'kb_scope', match: { value: 'account' } }
           ]
         }
       }

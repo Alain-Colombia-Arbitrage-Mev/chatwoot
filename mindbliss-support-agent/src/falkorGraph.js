@@ -18,33 +18,62 @@ export class GraphMemory {
     if (!this.enabled()) return [];
     const accountId = Number(payload.account?.id) || 0;
     const contactHash = payload.contact_hash || '';
-    if (!accountId || !contactHash) return [];
+    if (!accountId) return [];
 
-    const query = cypherWithParams({
+    const memories = [];
+    if (contactHash) {
+      const query = cypherWithParams({
+        account_id: accountId,
+        contact_hash: contactHash,
+        limit
+      }, `
+        MATCH (:Account {id: $account_id})-[:HAS_CONTACT]->(contact:Contact {hash: $contact_hash})-[:HAD_CONVERSATION]->(conv:Conversation)-[:HAS_MESSAGE]->(msg:Message)
+        RETURN msg.category, msg.priority, msg.summary, conv.id, msg.created_at
+        ORDER BY msg.created_at DESC
+        LIMIT $limit
+      `);
+
+      const raw = await this.query(query, true);
+      memories.push(...graphRows(raw).map((row, index) => ({
+        id: `falkor:${accountId}:${contactHash}:${index}`,
+        score: 0,
+        graph_score: 1,
+        payload: {
+          category: graphString(row[0]) || 'general',
+          priority: graphString(row[1]) || 'normal',
+          summary: graphString(row[2]),
+          conversation_id: graphString(row[3]),
+          created_at: graphString(row[4]),
+          source: 'falkordb'
+        }
+      })).filter(item => item.payload.summary));
+    }
+
+    const knowledgeQuery = cypherWithParams({
       account_id: accountId,
-      contact_hash: contactHash,
       limit
     }, `
-      MATCH (:Account {id: $account_id})-[:HAS_CONTACT]->(contact:Contact {hash: $contact_hash})-[:HAD_CONVERSATION]->(conv:Conversation)-[:HAS_MESSAGE]->(msg:Message)
-      RETURN msg.category, msg.priority, msg.summary, conv.id, msg.created_at
-      ORDER BY msg.created_at DESC
+      MATCH (:Account {id: $account_id})-[:HAS_KB_DOC]->(doc:KnowledgeDocument)
+      RETURN doc.category, doc.priority, doc.summary, doc.id, doc.created_at, doc.title
+      ORDER BY doc.created_at DESC
       LIMIT $limit
     `);
-
-    const raw = await this.query(query, true);
-    return graphRows(raw).map((row, index) => ({
-      id: `falkor:${accountId}:${contactHash}:${index}`,
+    const knowledgeRaw = await this.query(knowledgeQuery, true);
+    memories.push(...graphRows(knowledgeRaw).map((row, index) => ({
+      id: `falkor-kb:${accountId}:${index}`,
       score: 0,
       graph_score: 1,
       payload: {
         category: graphString(row[0]) || 'general',
         priority: graphString(row[1]) || 'normal',
         summary: graphString(row[2]),
-        conversation_id: graphString(row[3]),
+        message_id: graphString(row[3]),
         created_at: graphString(row[4]),
-        source: 'falkordb'
+        title: graphString(row[5]),
+        source: 'falkordb_kb'
       }
-    })).filter(item => item.payload.summary);
+    })).filter(item => item.payload.summary));
+    return memories;
   }
 
   async check() {
@@ -59,6 +88,10 @@ export class GraphMemory {
     const conversationId = String(payload.conversation?.id || '');
     const messageId = String(payload.id || '');
     if (!accountId || !contactHash || !conversationId || !messageId) return false;
+
+    if (payload.kb_scope === 'account') {
+      return this.storeKnowledge({ payload, triage, supportResult, summary, content, accountId, messageId });
+    }
 
     const query = cypherWithParams({
       account_id: accountId,
@@ -96,6 +129,46 @@ export class GraphMemory {
       MERGE (contact)-[:HAD_CONVERSATION]->(conv)
       MERGE (conv)-[:HAS_MESSAGE]->(msg)
       MERGE (msg)-[:IN_CATEGORY]->(cat)
+    `);
+
+    await this.query(query, false);
+    return true;
+  }
+
+  async storeKnowledge({ payload, triage, supportResult, summary, content, accountId, messageId }) {
+    const query = cypherWithParams({
+      account_id: accountId,
+      doc_id: `${accountId}:${messageId}`,
+      chatwoot_message_id: messageId,
+      conversation_id: String(payload.conversation?.id || ''),
+      title: payload.kb_title || summary.slice(0, 120),
+      tags: Array.isArray(payload.kb_tags) ? payload.kb_tags : [],
+      category: triage.category,
+      priority: triage.priority,
+      support_reason: triage.reason,
+      escalated: Boolean(supportResult?.escalate),
+      source: payload.source || 'chatwoot_kb_note',
+      summary,
+      content,
+      created_at: new Date().toISOString()
+    }, `
+      MERGE (a:Account {id: $account_id})
+      MERGE (doc:KnowledgeDocument {id: $doc_id})
+      SET doc.chatwoot_message_id = $chatwoot_message_id,
+          doc.conversation_id = $conversation_id,
+          doc.title = $title,
+          doc.tags = $tags,
+          doc.category = $category,
+          doc.priority = $priority,
+          doc.support_reason = $support_reason,
+          doc.escalated = $escalated,
+          doc.source = $source,
+          doc.summary = $summary,
+          doc.content = $content,
+          doc.created_at = $created_at
+      MERGE (cat:Category {name: $category})
+      MERGE (a)-[:HAS_KB_DOC]->(doc)
+      MERGE (doc)-[:IN_CATEGORY]->(cat)
     `);
 
     await this.query(query, false);

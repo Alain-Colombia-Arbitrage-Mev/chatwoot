@@ -40,3 +40,48 @@ test('creates private note with labels and memory for support messages', async (
   assert.equal(calls.some(call => call[0] === 'labels'), true);
   assert.equal(calls.some(call => call[0] === 'store'), true);
 });
+
+test('stores private kb command as account knowledge', async () => {
+  const calls = [];
+  const chatwoot = {
+    hasNoteMarker: async () => false,
+    addLabels: async (...args) => calls.push(['labels', ...args]),
+    createMessage: async (...args) => calls.push(['message', ...args])
+  };
+  const memory = {
+    store: async (...args) => {
+      calls.push(['store', ...args]);
+      return true;
+    }
+  };
+  const supportBrain = {
+    ask: async () => {
+      throw new Error('kb command should not call support brain');
+    }
+  };
+  const processor = new WebhookProcessor({
+    chatwoot: { labelPrefix: 'mb_ai' },
+    knowledge: { enabled: true, maxChars: 8000 }
+  }, { chatwoot, memory, supportBrain });
+
+  const result = await processor.process({
+    event: 'message_created',
+    id: 88,
+    private: true,
+    message_type: 'outgoing',
+    content_type: 'text',
+    content: '#kb OTP SMS\nCategoria: auth\nEl codigo OTP puede solicitarse por SMS cuando falla el correo.',
+    account: { id: 2 },
+    conversation: { id: 15 },
+    sender: { email: 'agent@example.com' }
+  }, 'delivery-2');
+
+  const storeCall = calls.find(call => call[0] === 'store');
+  const messageCall = calls.find(call => call[0] === 'message');
+  assert.equal(result.status, 'knowledge_stored');
+  assert.equal(storeCall[1].source, 'chatwoot_kb_note');
+  assert.equal(storeCall[1].kb_scope, 'account');
+  assert.equal(storeCall[2].category, 'auth');
+  assert.equal(messageCall[3].privateMessage, true);
+  assert.match(messageCall[3].content, /Documento guardado en memoria/);
+});

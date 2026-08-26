@@ -36,6 +36,10 @@ export function readConfig(env = process.env) {
       chunkMaxChars: intFrom(env.MEMORY_IMPORT_CHUNK_MAX_CHARS, 3000),
       dryRun: boolFrom(env.MEMORY_IMPORT_DRY_RUN, false)
     },
+    knowledge: {
+      enabled: boolFrom(env.KNOWLEDGE_COMMANDS_ENABLED, true),
+      maxChars: intFrom(env.KNOWLEDGE_COMMAND_MAX_CHARS, 8000)
+    },
     memory: {
       enabled: boolFrom(env.MEMORY_ENABLED, true),
       qdrantUrl: stripTrailingSlash(env.QDRANT_URL || 'http://host.docker.internal:6333'),

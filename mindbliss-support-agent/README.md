@@ -86,3 +86,21 @@ curl -fsS -X POST http://127.0.0.1:9108/memory/import \
   -H "Content-Type: application/json" \
   -d '{"account_id":2,"status":"all","max_conversations":100}'
 ```
+
+## Add documentation from Chatwoot
+
+Agents can add support knowledge without opening Qdrant/FalkorDB directly. In any
+Chatwoot conversation, create a private note that starts with `#kb`, `#memoria`
+or `/kb`:
+
+```text
+#kb OTP por SMS
+Categoria: auth
+Tags: otp, telefono
+Pregunta: El usuario no recibe el codigo OTP por correo.
+Respuesta: Validar el telefono del usuario y usar reenvio por SMS cuando el correo falle.
+```
+
+The bridge stores the note as account-level knowledge in Qdrant and FalkorDB,
+adds labels to the conversation, and replies with a private confirmation note
+containing `MB-KB-ID`. Public customer messages are never created by this flow.
