@@ -1,0 +1,40 @@
+name: Mindbliss Support Agent CI
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'mindbliss-support-agent/**'
+      - 'docker-compose.mindbliss-support.yaml'
+      - '.env.mindbliss-support-agent.example'
+      - '.github/workflows/mindbliss-support-agent.yml'
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'mindbliss-support-agent/**'
+      - 'docker-compose.mindbliss-support.yaml'
+      - '.env.mindbliss-support-agent.example'
+      - '.github/workflows/mindbliss-support-agent.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  support-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run unit tests
+        working-directory: mindbliss-support-agent
+        run: npm test
+
+      - name: Build support agent image
+        run: docker build -t mindblisspower/chatwoot-support-agent:ci mindbliss-support-agent
