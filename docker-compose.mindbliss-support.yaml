@@ -10,11 +10,12 @@ services:
       NODE_ENV: production
       PORT: "9108"
       CHATWOOT_BASE_URL: http://rails:3000
-      VP_SUPPORT_AI_URL: http://host.docker.internal:9096
-      QDRANT_URL: http://host.docker.internal:6333
-      FALKORDB_URL: redis://host.docker.internal:6380
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      VP_SUPPORT_AI_URL: http://vp-support:9096
+      QDRANT_URL: http://qdrant:6333
+      FALKORDB_URL: redis://falkordb:6379
+    networks:
+      - default
+      - mindbliss-ai-memory
     ports:
       - "127.0.0.1:9108:9108"
     depends_on:
@@ -26,3 +27,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+networks:
+  mindbliss-ai-memory:
+    external: true
+    name: ai-memory_default

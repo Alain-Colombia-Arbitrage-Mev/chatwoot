@@ -28,6 +28,9 @@ Run the service only on the support EC2:
 docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml up -d mindbliss-support-agent
 ```
 
+The compose overlay joins both Docker networks: Chatwoot's default network and the existing
+`ai-memory_default` network where `vp-support`, Qdrant and FalkorDB run.
+
 Provision the AgentBot inside the Chatwoot Rails container:
 
 ```bash
