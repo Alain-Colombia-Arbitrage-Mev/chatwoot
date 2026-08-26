@@ -34,3 +34,18 @@ test('allows local qdrant without api key when network is private', () => {
   assert.equal(cfg.memory.qdrantApiKey, '');
   assert.equal(cfg.memory.qdrantUrl, 'http://mindbliss-qdrant:6333');
 });
+
+test('rejects placeholder credentials inside falkordb url', () => {
+  assert.throws(() => readConfig({
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',
+    CHATWOOT_API_ACCESS_TOKEN: 'chatwoot-token',
+    CHATWOOT_BASE_URL: 'http://rails:3000',
+    VP_SUPPORT_AI_URL: 'http://vp-support:9096',
+    VP_SUPPORT_AI_TOKEN: 'support-token',
+    MEMORY_ENABLED: 'true',
+    OPENROUTER_API_KEY: 'openrouter-token',
+    QDRANT_URL: 'http://qdrant:6333',
+    FALKORDB_ENABLED: 'true',
+    FALKORDB_URL: 'redis://:CHANGE_ME@falkordb:6379'
+  }), /FALKORDB_URL/);
+});

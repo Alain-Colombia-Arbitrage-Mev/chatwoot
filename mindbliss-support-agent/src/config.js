@@ -66,7 +66,7 @@ export function readConfig(env = process.env) {
   if (cfg.memory.enabled) {
     if (!secretPresent(cfg.memory.openRouterApiKey)) missing.push('OPENROUTER_API_KEY');
     if (!cfg.memory.qdrantUrl) missing.push('QDRANT_URL');
-    if (cfg.memory.falkorEnabled && !cfg.memory.falkorUrl) missing.push('FALKORDB_URL');
+    if (cfg.memory.falkorEnabled && !urlConfigured(cfg.memory.falkorUrl)) missing.push('FALKORDB_URL');
   }
   if (missing.length > 0) {
     throw new Error(`Missing required env vars: ${missing.join(', ')}`);
@@ -94,6 +94,11 @@ function boolFrom(value, fallback) {
 function secretPresent(value) {
   const normalized = String(value || '').trim();
   return Boolean(normalized && normalized !== 'CHANGE_ME');
+}
+
+function urlConfigured(value) {
+  const normalized = String(value || '').trim();
+  return Boolean(normalized && !normalized.toUpperCase().includes('CHANGE_ME'));
 }
 
 function mapFrom(value) {

@@ -30,8 +30,12 @@ docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-sup
 
 The compose overlay joins Chatwoot's default network and the support-only `ai-memory_default`
 network. On soporte, Qdrant, FalkorDB, `vp-support` and `vp-kb-indexer` live in `/opt/ai-memory`;
-the bridge reaches them as `http://qdrant:6333`, `redis://falkordb:6379` and
+the bridge reaches them as `http://qdrant:6333`, `redis://:<FALKORDB_PASSWORD>@falkordb:6379` and
 `http://vp-support:9096` inside that private Docker network.
+
+Chatwoot's own `REDIS_URL` is separate and should stay pointed at Chatwoot Redis
+(`redis:6379`) for Rails/Sidekiq. Do not reuse it for FalkorDB memory; FalkorDB
+only shares the Redis wire protocol.
 
 Check runtime wiring:
 
@@ -58,7 +62,7 @@ Backfill historical support conversations into Qdrant and FalkorDB from the supp
 ```bash
 docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml exec \
   mindbliss-support-agent node src/importConversations.js \
-  --account-id 1 \
+  --account-id 2 \
   --status all \
   --max-conversations 500
 ```
@@ -69,7 +73,7 @@ requests. To run a small dry run first:
 ```bash
 docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-support.yaml exec \
   mindbliss-support-agent node src/importConversations.js \
-  --account-id 1 \
+  --account-id 2 \
   --max-conversations 10 \
   --dry-run
 ```
@@ -80,5 +84,5 @@ The same importer is exposed over localhost for controlled operations:
 curl -fsS -X POST http://127.0.0.1:9108/memory/import \
   -H "Authorization: Bearer $MEMORY_IMPORT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"account_id":1,"status":"all","max_conversations":100}'
+  -d '{"account_id":2,"status":"all","max_conversations":100}'
 ```
