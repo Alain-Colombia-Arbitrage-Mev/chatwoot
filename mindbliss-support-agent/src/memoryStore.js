@@ -1,0 +1,220 @@
+import { fetchJson } from './http.js';
+import { GraphMemory } from './falkorGraph.js';
+import { contactHash, deterministicPointId } from './security.js';
+import { cleanText } from './triage.js';
+
+export class MemoryStore {
+  constructor(config) {
+    this.config = config;
+    this.graph = new GraphMemory(config);
+    this.collectionReady = false;
+  }
+
+  async related(payload) {
+    if (!this.enabled()) return [];
+    const content = cleanText(payload.content);
+    if (!content) return [];
+
+    const hash = contactHash(payload);
+    const enrichedPayload = { ...payload, contact_hash: hash };
+    let hits = [];
+    if (this.vectorEnabled()) {
+      hits = await this.vectorRelated(enrichedPayload, content).catch(() => []);
+    }
+    const graphHits = await this.graph.related(enrichedPayload).catch(() => []);
+    return dedupeMemories([...hits, ...graphHits]);
+  }
+
+  async store(payload, triage, supportResult) {
+    if (!this.enabled()) return false;
+    const content = redactSensitiveText(cleanText(payload.content).slice(0, this.config.storeMaxChars));
+    if (!content) return false;
+
+    const hash = contactHash(payload);
+    const summary = cleanText(supportResult?.answer || content).slice(0, 700);
+    let stored = false;
+
+    if (this.vectorEnabled()) {
+      stored = await this.storeVector(payload, hash, triage, supportResult, summary, content).catch(() => false);
+    }
+
+    const graphStored = await this.graph.store({
+      payload,
+      contactHash: hash,
+      triage,
+      supportResult,
+      summary,
+      content
+    }).catch(() => false);
+    return stored || graphStored;
+  }
+
+  enabled() {
+    return Boolean(
+      this.config.enabled &&
+      (this.vectorEnabled() || this.graph.enabled())
+    );
+  }
+
+  vectorEnabled() {
+    return Boolean(
+      this.config.qdrantUrl &&
+      this.config.qdrantApiKey &&
+      this.config.openRouterApiKey
+    );
+  }
+
+  async vectorRelated(payload, content) {
+    const vector = await this.embed(`query: ${content}`);
+    await this.ensureCollection();
+    const hits = await this.search(payload, vector);
+    if (!this.config.rerankEnabled || hits.length < 2) return hits;
+    return this.rerank(content, hits).catch(() => hits);
+  }
+
+  async storeVector(payload, hash, triage, supportResult, summary, content) {
+    const vector = await this.embed(`passage: ${content}`);
+    await this.ensureCollection();
+    const pointId = deterministicPointId(payload.account?.id, payload.conversation?.id, payload.id);
+    await this.qdrant(`/collections/${encodeURIComponent(this.config.collection)}/points?wait=true`, {
+      method: 'PUT',
+      body: {
+        points: [{
+          id: pointId,
+          vector,
+          payload: {
+            account_id: Number(payload.account?.id) || null,
+            conversation_id: String(payload.conversation?.id || ''),
+            message_id: String(payload.id || ''),
+            contact_hash: hash,
+            category: triage.category,
+            priority: triage.priority,
+            support_reason: triage.reason,
+            ai_escalate: Boolean(supportResult?.escalate),
+            content,
+            summary,
+            created_at: new Date().toISOString()
+          }
+        }]
+      }
+    });
+    return true;
+  }
+
+  async ensureCollection() {
+    if (this.collectionReady) return;
+    const name = encodeURIComponent(this.config.collection);
+    try {
+      await this.qdrant(`/collections/${name}`);
+    } catch (error) {
+      if (!String(error.message).includes('404')) throw error;
+      await this.qdrant(`/collections/${name}`, {
+        method: 'PUT',
+        body: {
+          vectors: {
+            size: this.config.embeddingDims,
+            distance: 'Cosine'
+          }
+        }
+      });
+    }
+    this.collectionReady = true;
+  }
+
+  async embed(input) {
+    const response = await fetchJson(this.config.embeddingUrl, {
+      method: 'POST',
+      timeoutMs: this.config.timeoutMs,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.config.openRouterApiKey}`
+      },
+      body: {
+        model: this.config.embeddingModel,
+        input
+      }
+    });
+    const vector = response?.data?.[0]?.embedding;
+    if (!Array.isArray(vector) || vector.length !== this.config.embeddingDims) {
+      throw new Error(`embedding dimension mismatch for ${this.config.embeddingModel}`);
+    }
+    return vector;
+  }
+
+  async search(payload, vector) {
+    const response = await this.qdrant(`/collections/${encodeURIComponent(this.config.collection)}/points/search`, {
+      method: 'POST',
+      body: {
+        vector,
+        limit: this.config.searchLimit,
+        with_payload: true,
+        filter: {
+          must: [
+            { key: 'account_id', match: { value: Number(payload.account?.id) || 0 } },
+            { key: 'contact_hash', match: { value: contactHash(payload) } }
+          ]
+        }
+      }
+    });
+    return Array.isArray(response?.result) ? response.result : [];
+  }
+
+  async rerank(query, hits) {
+    const response = await fetchJson(this.config.rerankUrl, {
+      method: 'POST',
+      timeoutMs: this.config.timeoutMs,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.config.openRouterApiKey}`
+      },
+      body: {
+        model: this.config.rerankModel,
+        query,
+        top_n: Math.min(hits.length, this.config.searchLimit),
+        documents: hits.map(hit => ({ text: hit.payload?.content || hit.payload?.summary || '' }))
+      }
+    });
+    const results = response?.results || [];
+    return results
+      .map(item => {
+        const hit = hits[item.index];
+        return hit ? { ...hit, rerank_score: item.relevance_score } : null;
+      })
+      .filter(Boolean);
+  }
+
+  qdrant(path, { method = 'GET', body } = {}) {
+    return fetchJson(`${this.config.qdrantUrl}${path}`, {
+      method,
+      body,
+      timeoutMs: this.config.timeoutMs,
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': this.config.qdrantApiKey
+      }
+    });
+  }
+}
+
+function dedupeMemories(memories) {
+  const seen = new Set();
+  return memories.filter(memory => {
+    const payload = memory.payload || {};
+    const key = [
+      payload.source || 'qdrant',
+      payload.message_id || '',
+      payload.conversation_id || '',
+      payload.summary || payload.content || ''
+    ].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function redactSensitiveText(text) {
+  return cleanText(text)
+    .replace(/\b\d{6,}\b/g, '[numero-redactado]')
+    .replace(/\b(?:sk|pk|rk|or)-[A-Za-z0-9_-]{12,}\b/g, '[token-redactado]')
+    .replace(/(password|contraseña|clave)\s*[:=]\s*\S+/gi, '$1=[redactado]');
+}

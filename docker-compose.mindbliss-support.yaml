@@ -1,0 +1,28 @@
+services:
+  mindbliss-support-agent:
+    build:
+      context: ./mindbliss-support-agent
+    image: mindblisspower/chatwoot-support-agent:latest
+    restart: always
+    env_file:
+      - .env.mindbliss-support-agent
+    environment:
+      NODE_ENV: production
+      PORT: "9108"
+      CHATWOOT_BASE_URL: http://rails:3000
+      VP_SUPPORT_AI_URL: http://host.docker.internal:9096
+      QDRANT_URL: http://host.docker.internal:6333
+      FALKORDB_URL: redis://host.docker.internal:6380
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:9108:9108"
+    depends_on:
+      - rails
+      - sidekiq
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:9108/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
