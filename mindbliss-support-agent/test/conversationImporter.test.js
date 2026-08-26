@@ -74,3 +74,25 @@ test('imports support conversations into memory store', async () => {
   assert.equal(stored[0][0].source, 'chatwoot_backfill');
   assert.equal(stored[0][1].category, 'payments');
 });
+
+test('snake_case import overrides take precedence over config defaults', async () => {
+  const importer = new ConversationImporter({
+    import: { accountId: 1, dryRun: false, maxConversations: 500 },
+    chatwoot: {},
+    memory: {}
+  }, {
+    chatwoot: {
+      listConversations: async () => ({ payload: [] })
+    },
+    memory: {
+      store: async () => {
+        throw new Error('dry run should not store');
+      }
+    }
+  });
+
+  const result = await importer.run({ account_id: 2, dry_run: true, max_conversations: 1 });
+
+  assert.equal(result.account_id, 2);
+  assert.equal(result.dry_run, true);
+});

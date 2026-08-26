@@ -12,7 +12,7 @@ export class ConversationImporter {
   }
 
   async run(options = {}) {
-    const opts = normalizeOptions({ ...this.config.import, ...options });
+    const opts = normalizeOptions(mergeImportOptions(this.config.import, options));
     if (!opts.accountId) throw new Error('account_id is required');
 
     const summary = {
@@ -177,6 +177,26 @@ export function normalizeOptions(raw) {
     maxMessagesPerConversation: boundedInt(raw.maxMessagesPerConversation ?? raw.max_messages_per_conversation, 1, 1000, 300),
     chunkMaxChars: boundedInt(raw.chunkMaxChars ?? raw.chunk_max_chars, 500, 12000, 3000),
     dryRun: booleanFrom(raw.dryRun ?? raw.dry_run, false)
+  };
+}
+
+function mergeImportOptions(defaults = {}, overrides = {}) {
+  return {
+    accountId: overrides.accountId ?? overrides.account_id ?? defaults.accountId ?? defaults.account_id,
+    status: overrides.status ?? defaults.status,
+    inboxId: overrides.inboxId ?? overrides.inbox_id ?? defaults.inboxId ?? defaults.inbox_id,
+    teamId: overrides.teamId ?? overrides.team_id ?? defaults.teamId ?? defaults.team_id,
+    supportOnly: overrides.supportOnly ?? overrides.support_only ?? defaults.supportOnly ?? defaults.support_only,
+    includePrivate: overrides.includePrivate ?? overrides.include_private ?? defaults.includePrivate ?? defaults.include_private,
+    maxPages: overrides.maxPages ?? overrides.max_pages ?? defaults.maxPages ?? defaults.max_pages,
+    maxConversations: overrides.maxConversations ?? overrides.max_conversations ?? defaults.maxConversations ?? defaults.max_conversations,
+    maxMessagesPerConversation:
+      overrides.maxMessagesPerConversation ??
+      overrides.max_messages_per_conversation ??
+      defaults.maxMessagesPerConversation ??
+      defaults.max_messages_per_conversation,
+    chunkMaxChars: overrides.chunkMaxChars ?? overrides.chunk_max_chars ?? defaults.chunkMaxChars ?? defaults.chunk_max_chars,
+    dryRun: overrides.dryRun ?? overrides.dry_run ?? defaults.dryRun ?? defaults.dry_run
   };
 }
 
