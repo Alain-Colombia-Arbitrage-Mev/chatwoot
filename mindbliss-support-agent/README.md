@@ -30,12 +30,26 @@ docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-sup
 
 The compose overlay joins Chatwoot's default network and the support-only `ai-memory_default`
 network. On soporte, Qdrant, FalkorDB, `vp-support` and `vp-kb-indexer` live in `/opt/ai-memory`;
-the bridge reaches them as `http://qdrant:6333`, `redis://:<FALKORDB_PASSWORD>@falkordb:6379` and
-`http://vp-support:9096` inside that private Docker network.
+the bridge reaches them as `http://mindbrain-qdrant:6333`,
+`redis://:<FALKORDB_PASSWORD>@mindbrain-falkordb:6379` and
+`http://mindbrain-vp-support:9096` inside that private Docker network.
 
 Chatwoot's own `REDIS_URL` is separate and should stay pointed at Chatwoot Redis
 (`redis:6379`) for Rails/Sidekiq. Do not reuse it for FalkorDB memory; FalkorDB
 only shares the Redis wire protocol.
+
+Preferred production URLs:
+
+```env
+VP_SUPPORT_AI_URL=http://mindbrain-vp-support:9096
+QDRANT_URL=http://mindbrain-qdrant:6333
+FALKORDB_URL=redis://:<FALKORDB_PASSWORD>@mindbrain-falkordb:6379
+OPENROUTER_RERANK_URL=https://openrouter.ai/api/v1/rerank
+SUPPORT_RERANK_MODEL=cohere/rerank-4-pro
+```
+
+Keep Qdrant and FalkorDB bound to localhost/private Docker networks. Use an SSH
+tunnel for dashboards and debugging instead of exposing database ports publicly.
 
 Check runtime wiring:
 

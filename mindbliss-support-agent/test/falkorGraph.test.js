@@ -40,3 +40,18 @@ test('stores account knowledge as KnowledgeDocument graph node', async () => {
   assert.match(commands[0][2], /KnowledgeDocument/);
   assert.match(commands[0][2], /HAS_KB_DOC/);
 });
+
+test('readiness reports falkordb target without credentials', async () => {
+  const graph = new GraphMemory({
+    enabled: true,
+    falkorEnabled: true,
+    falkorUrl: 'redis://:secret@mindbrain-falkordb:6379',
+    falkorGraph: 'chatwoot_memory',
+    timeoutMs: 1000
+  });
+  graph.redis.command = async () => 'PONG';
+
+  const result = await graph.check();
+
+  assert.equal(result.target, 'redis://mindbrain-falkordb:6379');
+});

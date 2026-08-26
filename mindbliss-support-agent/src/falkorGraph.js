@@ -79,7 +79,7 @@ export class GraphMemory {
   async check() {
     if (!this.enabled()) return { enabled: false };
     await this.redis.command('PING');
-    return { enabled: true, status: 'ok', graph: this.graph };
+    return { enabled: true, status: 'ok', graph: this.graph, target: this.redis.target() };
   }
 
   async store({ payload, contactHash, triage, supportResult, summary, content }) {
@@ -190,6 +190,10 @@ class RedisGraphClient {
     this.password = decodeURIComponent(parsed.password || '');
     this.db = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname.slice(1) : '';
     this.timeoutMs = timeoutMs || DEFAULT_TIMEOUT_MS;
+  }
+
+  target() {
+    return `redis://${this.host}:${this.port}`;
   }
 
   command(...args) {

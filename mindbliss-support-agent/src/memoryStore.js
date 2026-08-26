@@ -227,9 +227,17 @@ export class MemoryStore {
     if (this.vectorEnabled()) {
       try {
         await this.ensureCollection();
-        checks.qdrant = { status: 'ok', collection: this.config.collection };
+        checks.qdrant = {
+          status: 'ok',
+          collection: this.config.collection,
+          target: safeUrlTarget(this.config.qdrantUrl)
+        };
       } catch (error) {
-        checks.qdrant = { status: 'error', error: error.message };
+        checks.qdrant = {
+          status: 'error',
+          error: error.message,
+          target: safeUrlTarget(this.config.qdrantUrl)
+        };
       }
     } else {
       checks.qdrant = { status: 'disabled' };
@@ -243,7 +251,8 @@ export class MemoryStore {
 
     checks.reranker = {
       status: this.config.rerankEnabled && this.config.openRouterApiKey ? 'configured' : 'disabled',
-      model: this.config.rerankModel
+      model: this.config.rerankModel,
+      target: safeUrlTarget(this.config.rerankUrl)
     };
 
     if (external && checks.reranker.status === 'configured') {
@@ -257,6 +266,15 @@ export class MemoryStore {
 
     const failed = Object.values(checks).some(check => check?.status === 'error');
     return { enabled: true, status: failed ? 'error' : 'ok', checks };
+  }
+}
+
+function safeUrlTarget(value) {
+  try {
+    const url = new URL(value);
+    return `${url.protocol}//${url.hostname}${url.port ? `:${url.port}` : ''}${url.pathname === '/' ? '' : url.pathname}`;
+  } catch {
+    return '';
   }
 }
 

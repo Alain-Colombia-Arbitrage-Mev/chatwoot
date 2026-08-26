@@ -49,3 +49,15 @@ test('rejects placeholder credentials inside falkordb url', () => {
     FALKORDB_URL: 'redis://:CHANGE_ME@falkordb:6379'
   }), /FALKORDB_URL/);
 });
+
+test('requires explicit production service urls when memory is enabled', () => {
+  assert.throws(() => readConfig({
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',
+    CHATWOOT_API_ACCESS_TOKEN: 'chatwoot-token',
+    CHATWOOT_BASE_URL: 'http://rails:3000',
+    VP_SUPPORT_AI_TOKEN: 'support-token',
+    MEMORY_ENABLED: 'true',
+    OPENROUTER_API_KEY: 'openrouter-token',
+    FALKORDB_ENABLED: 'true'
+  }), /VP_SUPPORT_AI_URL.*QDRANT_URL.*FALKORDB_URL/);
+});

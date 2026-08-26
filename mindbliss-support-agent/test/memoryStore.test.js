@@ -91,3 +91,25 @@ test('vector related includes contact memory and account knowledge', async () =>
   assert.equal(related.length, 2);
   assert.equal(related.some(item => item.payload.summary === 'account kb'), true);
 });
+
+test('readiness reports redacted qdrant and reranker targets', async () => {
+  const store = new MemoryStore({
+    enabled: true,
+    qdrantUrl: 'http://:secret@mindbrain-qdrant:6333',
+    qdrantApiKey: '',
+    openRouterApiKey: 'or-key',
+    collection: 'chatwoot_memory',
+    embeddingDims: 2,
+    rerankEnabled: true,
+    rerankUrl: 'https://openrouter.ai/api/v1/rerank',
+    rerankModel: 'cohere/rerank-4-pro',
+    falkorEnabled: false,
+    timeoutMs: 1000
+  });
+  store.ensureCollection = async () => {};
+
+  const result = await store.check();
+
+  assert.equal(result.checks.qdrant.target, 'http://mindbrain-qdrant:6333');
+  assert.equal(result.checks.reranker.target, 'https://openrouter.ai/api/v1/rerank');
+});

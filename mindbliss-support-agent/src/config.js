@@ -20,7 +20,7 @@ export function readConfig(env = process.env) {
       forwardedProto: env.CHATWOOT_INTERNAL_FORWARDED_PROTO || 'https'
     },
     support: {
-      url: stripTrailingSlash(env.VP_SUPPORT_AI_URL || 'http://host.docker.internal:9096'),
+      url: stripTrailingSlash(env.VP_SUPPORT_AI_URL || ''),
       token: env.VP_SUPPORT_AI_TOKEN || '',
       timeoutMs: intFrom(env.VP_SUPPORT_AI_TIMEOUT_MS, 45000)
     },
@@ -42,7 +42,7 @@ export function readConfig(env = process.env) {
     },
     memory: {
       enabled: boolFrom(env.MEMORY_ENABLED, true),
-      qdrantUrl: stripTrailingSlash(env.QDRANT_URL || 'http://host.docker.internal:6333'),
+      qdrantUrl: stripTrailingSlash(env.QDRANT_URL || ''),
       qdrantApiKey: env.QDRANT_API_KEY || '',
       collection: env.QDRANT_MEMORY_COLLECTION || 'chatwoot_memory',
       openRouterApiKey: env.OPENROUTER_API_KEY || '',
@@ -55,7 +55,7 @@ export function readConfig(env = process.env) {
       rerankUrl: env.OPENROUTER_RERANK_URL || 'https://openrouter.ai/api/v1/rerank',
       rerankModel: env.SUPPORT_RERANK_MODEL || 'cohere/rerank-4-pro',
       falkorEnabled: boolFrom(env.FALKORDB_ENABLED, true),
-      falkorUrl: env.FALKORDB_URL || 'redis://host.docker.internal:6380',
+      falkorUrl: env.FALKORDB_URL || '',
       falkorGraph: env.FALKORDB_GRAPH || 'chatwoot_memory',
       timeoutMs: intFrom(env.MEMORY_TIMEOUT_MS, 20000)
     }
