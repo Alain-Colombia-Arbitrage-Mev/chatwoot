@@ -1,0 +1,38 @@
+name: Mindbliss Voice Agent CI
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'mindbliss-voice-agent/**'
+      - 'docker-compose.mindbliss-support.yaml'
+      - '.env.mindbliss-voice-agent.example'
+      - '.github/workflows/mindbliss-voice-agent.yml'
+  pull_request:
+    paths:
+      - 'mindbliss-voice-agent/**'
+      - 'docker-compose.mindbliss-support.yaml'
+      - '.env.mindbliss-voice-agent.example'
+      - '.github/workflows/mindbliss-voice-agent.yml'
+
+jobs:
+  voice-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        working-directory: mindbliss-voice-agent
+        run: pip install -e ".[test]"
+
+      - name: Run tests
+        working-directory: mindbliss-voice-agent
+        run: pytest -q
+
+      - name: Build voice agent image
+        run: docker build -t mindblisspower/chatwoot-voice-agent:ci mindbliss-voice-agent

@@ -30,6 +30,7 @@ master.key
 # Ignore env files
 .env
 .env.mindbliss-support-agent
+.env.mindbliss-voice-agent
 
 public/uploads
 public/packs*
