@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from voice_agent.config import get_settings
-from voice_agent.gateway import app, public_ws_url
+from voice_agent.gateway import app, attach_runner_token, public_ws_url
 from voice_agent.security import verify_twilio_signature, verify_whatsapp_signature
 
 
@@ -31,6 +31,13 @@ def test_public_ws_url_maps_tokenized_runner_path(monkeypatch: pytest.MonkeyPatc
     url = public_ws_url("ws://mindbliss-voice-pipecat:9111/ws/signed-token", settings)
 
     assert url == "wss://soporte.mindblisspower.com/voice/twilio/ws/signed-token"
+
+
+def test_runner_token_field_is_attached_to_websocket_url() -> None:
+    assert (
+        attach_runner_token("wss://0.0.0.0:9111/ws", "signed-token")
+        == "wss://0.0.0.0:9111/ws/signed-token"
+    )
 
 
 def test_twilio_signature_validation() -> None:

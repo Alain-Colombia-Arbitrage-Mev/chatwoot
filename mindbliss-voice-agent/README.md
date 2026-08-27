@@ -8,6 +8,7 @@ Configure nginx on `soporte.mindblisspower.com` to proxy:
 
 ```nginx
 location /voice/ {
+  access_log off;
   proxy_pass http://127.0.0.1:9110;
   proxy_set_header Host $host;
   proxy_set_header X-Forwarded-Proto $scheme;
@@ -15,6 +16,7 @@ location /voice/ {
 }
 
 location /voice/twilio/ws {
+  access_log off;
   rewrite ^/voice/twilio/ws(.*)$ /ws$1 break;
   proxy_pass http://127.0.0.1:9111;
   proxy_http_version 1.1;

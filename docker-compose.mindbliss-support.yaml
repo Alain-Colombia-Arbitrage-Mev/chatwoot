@@ -30,7 +30,7 @@ services:
       context: ./mindbliss-voice-agent
     image: mindblisspower/chatwoot-voice-agent:latest
     restart: always
-    command: ["uvicorn", "voice_agent.gateway:app", "--host", "0.0.0.0", "--port", "9110"]
+    command: ["uvicorn", "voice_agent.gateway:app", "--host", "0.0.0.0", "--port", "9110", "--no-access-log"]
     env_file:
       - .env.mindbliss-voice-agent
     environment:

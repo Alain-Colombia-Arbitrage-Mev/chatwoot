@@ -205,7 +205,17 @@ async def create_pipecat_ws_url(settings: Settings, body: dict[str, Any]) -> str
     raw_ws_url = data.get("wsUrl") or data.get("ws_url")
     if not raw_ws_url:
         raise RuntimeError("pipecat_ws_missing")
+    raw_ws_url = attach_runner_token(raw_ws_url, data.get("token"))
     return public_ws_url(raw_ws_url, settings)
+
+
+def attach_runner_token(raw_ws_url: str, token: Any) -> str:
+    if not token:
+        return raw_ws_url
+    parsed = urlsplit(raw_ws_url)
+    if parsed.path.rstrip("/") == "/ws" and not parsed.query:
+        return f"{raw_ws_url.rstrip('/')}/{token}"
+    return raw_ws_url
 
 
 def public_ws_url(raw_ws_url: str, settings: Settings) -> str:
