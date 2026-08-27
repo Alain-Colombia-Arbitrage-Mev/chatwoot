@@ -33,6 +33,28 @@ test('allows local qdrant without api key when network is private', () => {
 
   assert.equal(cfg.memory.qdrantApiKey, '');
   assert.equal(cfg.memory.qdrantUrl, 'http://mindbliss-qdrant:6333');
+  assert.equal(cfg.tickets.accountId, 0);
+  assert.equal(cfg.tickets.labelPrefix, 'mb_ticket');
+});
+
+test('configures ticket operations from dedicated env without making token boot-critical', () => {
+  const cfg = readConfig({
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',
+    CHATWOOT_API_ACCESS_TOKEN: 'chatwoot-token',
+    CHATWOOT_BASE_URL: 'http://rails:3000',
+    VP_SUPPORT_AI_URL: 'http://vp-support:9096',
+    VP_SUPPORT_AI_TOKEN: 'support-token',
+    MEMORY_ENABLED: 'false',
+    MEMORY_IMPORT_ACCOUNT_ID: '2',
+    SUPPORT_TICKET_ACCOUNT_ID: '3',
+    SUPPORT_TICKET_INBOX_ID: '7',
+    SUPPORT_TICKET_TOKEN: 'ticket-token'
+  });
+
+  assert.equal(cfg.tickets.enabled, true);
+  assert.equal(cfg.tickets.accountId, 3);
+  assert.equal(cfg.tickets.inboxId, 7);
+  assert.equal(cfg.tickets.token, 'ticket-token');
 });
 
 test('rejects placeholder credentials inside falkordb url', () => {

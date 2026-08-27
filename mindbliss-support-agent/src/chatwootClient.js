@@ -14,19 +14,87 @@ export class ChatwootClient {
     return Array.isArray(data?.payload) ? data.payload : Array.isArray(data) ? data : [];
   }
 
-  async listConversations(accountId, { page = 1, status = 'all', inboxId, teamId } = {}) {
+  async listConversations(accountId, { page = 1, status = 'all', inboxId, teamId, assigneeType = 'all', q = '', labels = [] } = {}) {
     const query = new URLSearchParams({
       page: String(page),
       status,
-      assignee_type: 'all'
+      assignee_type: assigneeType
     });
     if (inboxId) query.set('inbox_id', String(inboxId));
     if (teamId) query.set('team_id', String(teamId));
+    if (q) query.set('q', q);
+    for (const label of labels) query.append('labels[]', label);
 
     const data = await this.request(`/api/v1/accounts/${accountId}/conversations?${query}`);
     const payload = data?.data?.payload || data?.payload || [];
     const meta = data?.data?.meta || data?.meta || {};
     return { payload: Array.isArray(payload) ? payload : [], meta };
+  }
+
+  async getConversation(accountId, conversationId) {
+    return this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}`);
+  }
+
+  async searchContacts(accountId, q) {
+    const query = new URLSearchParams({ q: String(q || '') });
+    const data = await this.request(`/api/v1/accounts/${accountId}/contacts/search?${query}`);
+    const payload = data?.payload || data?.data?.payload || data || [];
+    return Array.isArray(payload) ? payload : [];
+  }
+
+  async createContact(accountId, { inboxId, name, email, phoneNumber, identifier, customAttributes = {} }) {
+    const data = await this.request(`/api/v1/accounts/${accountId}/contacts`, {
+      method: 'POST',
+      body: {
+        inbox_id: inboxId,
+        name,
+        email,
+        phone_number: phoneNumber,
+        identifier,
+        custom_attributes: customAttributes,
+        blocked: false
+      }
+    });
+    return unwrapPayload(data);
+  }
+
+  async createConversation(accountId, {
+    sourceId,
+    inboxId,
+    contactId,
+    subject,
+    content,
+    status = 'open',
+    priority,
+    assigneeId,
+    teamId,
+    privateMessage = false
+  }) {
+    const body = {
+      source_id: sourceId,
+      inbox_id: inboxId,
+      contact_id: contactId,
+      status,
+      assignee_id: assigneeId,
+      team_id: assigneeId ? undefined : teamId,
+      additional_attributes: subject ? { mail_subject: subject } : undefined,
+      message: content ? {
+        content,
+        private: privateMessage,
+        message_type: privateMessage ? 'outgoing' : 'incoming',
+        content_type: 'text'
+      } : undefined
+    };
+    Object.keys(body).forEach(key => body[key] === undefined && delete body[key]);
+    const conversation = await this.request(`/api/v1/accounts/${accountId}/conversations`, {
+      method: 'POST',
+      body
+    });
+    const conversationId = responseId(conversation);
+    if (priority && priority !== 'normal' && conversationId) {
+      await this.setPriority(accountId, conversationId, priority).catch(() => null);
+    }
+    return conversation;
   }
 
   async conversationMessages(accountId, conversationId, { after = 0 } = {}) {
@@ -67,18 +135,52 @@ export class ChatwootClient {
   }
 
   async openConversation(accountId, conversationId) {
+    return this.setStatus(accountId, conversationId, 'open');
+  }
+
+  async closeConversation(accountId, conversationId) {
+    return this.setStatus(accountId, conversationId, 'resolved');
+  }
+
+  async setStatus(accountId, conversationId, status) {
     return this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}/toggle_status`, {
       method: 'POST',
-      body: { status: 'open' }
+      body: { status }
     });
   }
 
   async assignTeam(accountId, conversationId, teamId) {
     if (!teamId) return null;
+    return this.assignConversation(accountId, conversationId, { teamId });
+  }
+
+  async assignConversation(accountId, conversationId, { assigneeId, teamId } = {}) {
+    if (!assigneeId && !teamId) return null;
     return this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}/assignments`, {
       method: 'POST',
-      body: { team_id: teamId }
+      body: {
+        assignee_id: assigneeId,
+        team_id: assigneeId ? undefined : teamId
+      }
     });
+  }
+
+  async listAgents(accountId) {
+    const data = await this.request(`/api/v1/accounts/${accountId}/agents`);
+    const payload = data?.payload || data?.data?.payload || data || [];
+    return Array.isArray(payload) ? payload : [];
+  }
+
+  async listTeams(accountId) {
+    const data = await this.request(`/api/v1/accounts/${accountId}/teams`);
+    const payload = data?.payload || data?.data?.payload || data || [];
+    return Array.isArray(payload) ? payload : [];
+  }
+
+  async listInboxes(accountId) {
+    const data = await this.request(`/api/v1/accounts/${accountId}/inboxes`);
+    const payload = data?.payload || data?.data?.payload || data || [];
+    return Array.isArray(payload) ? payload : [];
   }
 
   async addLabels(accountId, conversationId, newLabels) {
@@ -106,4 +208,15 @@ export class ChatwootClient {
       headers
     });
   }
+}
+
+function unwrapPayload(data) {
+  if (Array.isArray(data?.payload)) return data.payload[0] || data;
+  if (data?.payload?.contact) return data.payload.contact;
+  if (data?.payload && typeof data.payload === 'object') return data.payload;
+  return data;
+}
+
+function responseId(data) {
+  return Number(data?.id || data?.payload?.id || data?.data?.id) || 0;
 }

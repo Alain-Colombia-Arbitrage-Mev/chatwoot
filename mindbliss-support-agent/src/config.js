@@ -40,6 +40,14 @@ export function readConfig(env = process.env) {
       enabled: boolFrom(env.KNOWLEDGE_COMMANDS_ENABLED, true),
       maxChars: intFrom(env.KNOWLEDGE_COMMAND_MAX_CHARS, 8000)
     },
+    tickets: {
+      enabled: boolFrom(env.SUPPORT_TICKETS_ENABLED, true),
+      token: env.SUPPORT_TICKET_TOKEN || '',
+      accountId: intFrom(env.SUPPORT_TICKET_ACCOUNT_ID || env.MEMORY_IMPORT_ACCOUNT_ID, 0),
+      inboxId: intFrom(env.SUPPORT_TICKET_INBOX_ID, 0),
+      labelPrefix: env.SUPPORT_TICKET_LABEL_PREFIX || 'mb_ticket',
+      maxContentChars: intFrom(env.SUPPORT_TICKET_MAX_CONTENT_CHARS, 8000)
+    },
     memory: {
       enabled: boolFrom(env.MEMORY_ENABLED, true),
       qdrantUrl: stripTrailingSlash(env.QDRANT_URL || ''),

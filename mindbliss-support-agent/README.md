@@ -69,6 +69,71 @@ MINDBLISS_AGENT_INBOX_IDS=all \
 bundle exec rails runner deployment/mindbliss_support_agent_setup.rb
 ```
 
+## Ticket operations
+
+The bridge also exposes a localhost-only ticket API backed by Chatwoot
+conversations. Protect it with `SUPPORT_TICKET_TOKEN`; set
+`SUPPORT_TICKET_ACCOUNT_ID=2` and optionally `SUPPORT_TICKET_INBOX_ID` for the
+default inbox used when creating tickets.
+
+List tickets:
+
+```bash
+curl -fsS 'http://127.0.0.1:9108/tickets?status=open&account_id=2' \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN"
+
+curl -fsS 'http://127.0.0.1:9108/tickets?status=closed&account_id=2' \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN"
+```
+
+List routing targets:
+
+```bash
+curl -fsS 'http://127.0.0.1:9108/tickets/agents?account_id=2' \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN"
+
+curl -fsS 'http://127.0.0.1:9108/tickets/teams?account_id=2' \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN"
+
+curl -fsS 'http://127.0.0.1:9108/tickets/inboxes?account_id=2' \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN"
+```
+
+Create a ticket and route it to a responsible agent. Assignment uses Chatwoot's
+native notification settings, including email notifications when enabled for the
+agent:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:9108/tickets \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": 2,
+    "inbox_id": 1,
+    "email": "cliente@example.com",
+    "name": "Cliente",
+    "subject": "OTP no llega",
+    "content": "El usuario no puede validar el codigo OTP.",
+    "category": "auth",
+    "priority": "high",
+    "assignee_email": "agente@example.com"
+  }'
+```
+
+Close or escalate an existing ticket:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:9108/tickets/123/close \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"account_id":2,"note":"Validado y resuelto."}'
+
+curl -fsS -X POST http://127.0.0.1:9108/tickets/123/escalate \
+  -H "Authorization: Bearer $SUPPORT_TICKET_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"account_id":2,"priority":"urgent","assignee_email":"lider@example.com","note":"Requiere revision manual."}'
+```
+
 ## Import existing conversations
 
 Backfill historical support conversations into Qdrant and FalkorDB from the support EC2:
