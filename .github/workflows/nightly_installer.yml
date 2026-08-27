@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   nightly:
-    if: github.repository == 'chatwoot/chatwoot' || github.event_name == 'workflow_dispatch'
+    if: github.repository == 'chatwoot/chatwoot'
     runs-on: ubuntu-24.04
     steps:
 
