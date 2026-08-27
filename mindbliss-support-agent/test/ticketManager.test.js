@@ -87,6 +87,8 @@ test('closes a ticket with resolved status and private note', async () => {
   const result = await manager.close(77, { note: 'Caso verificado y resuelto.' });
 
   assert.equal(result.status, 'ticket_closed');
+  assert.equal(result.ticket.id, 77);
+  assert.equal(result.ticket.status, 'resolved');
   assert.equal(calls.some(call => call[0] === 'message' && call[3].privateMessage === true), true);
   assert.equal(calls.some(call => call[0] === 'close'), true);
 });

@@ -94,7 +94,10 @@ export class TicketManager {
       labels: input.labels
     });
     const conversation = await this.chatwoot.closeConversation(input.accountId, conversationId);
-    return { status: 'ticket_closed', ticket: compactConversation(conversation) };
+    return {
+      status: 'ticket_closed',
+      ticket: compactConversation({ ...conversation, id: conversationId, status: conversation?.status || 'resolved' })
+    };
   }
 
   async escalate(conversationId, raw = {}) {
