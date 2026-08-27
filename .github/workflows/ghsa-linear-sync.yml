@@ -12,13 +12,37 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Check integration secrets
+        id: preflight
+        env:
+          GHSA_READ_TOKEN: ${{ secrets.GHSA_READ_TOKEN }}
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          LINEAR_TEAM_ID: ${{ secrets.LINEAR_TEAM_ID }}
+          LINEAR_PROJECT_ID: ${{ secrets.LINEAR_PROJECT_ID }}
+          LINEAR_LABEL_ID: ${{ secrets.LINEAR_LABEL_ID }}
+        run: |
+          if [ -n "$GHSA_READ_TOKEN" ] \
+            && [ -n "$LINEAR_API_KEY" ] \
+            && [ -n "$LINEAR_TEAM_ID" ] \
+            && [ -n "$LINEAR_PROJECT_ID" ] \
+            && [ -n "$LINEAR_LABEL_ID" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "GHSA/Linear secrets are not configured; skipping advisory sync."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.preflight.outputs.enabled == 'true'
       - uses: actions/setup-python@v5
+        if: steps.preflight.outputs.enabled == 'true'
         with:
           python-version: '3.11'
       - name: Install dependencies
+        if: steps.preflight.outputs.enabled == 'true'
         run: pip install requests==2.32.3
       - name: Sync advisories
+        if: steps.preflight.outputs.enabled == 'true'
         env:
           GHSA_READ_TOKEN: ${{ secrets.GHSA_READ_TOKEN }}
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
