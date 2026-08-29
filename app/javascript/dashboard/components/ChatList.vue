@@ -9,6 +9,7 @@ import {
 
 import ChatListHeader from './ChatListHeader.vue';
 import ConversationList from './ConversationList.vue';
+import SupportTicketBoard from './SupportTicketBoard.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import ConversationFilter from 'next/filter/ConversationFilter.vue';
 import SaveCustomView from 'next/filter/SaveCustomView.vue';
@@ -39,7 +40,12 @@ import filterQueryGenerator from '../helper/filterQueryGenerator.js';
 import languages from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
 import countries from 'shared/constants/countries';
 import { generateValuesForEditCustomViews } from 'dashboard/helper/customViewsHelper';
-import { conversationListPageURL } from '../helper/URLHelper';
+import {
+  conversationListPageURL,
+  conversationUrl,
+  frontendURL,
+} from '../helper/URLHelper';
+import ConversationApi from '../api/inbox/conversation';
 import {
   isOnMentionsView,
   isOnParticipatingView,
@@ -76,6 +82,7 @@ const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
 const showAdvancedFilters = ref(false);
+const showTicketBoard = ref(false);
 // chatsOnView is to store the chats that are currently visible on the screen,
 // which mirrors the conversationList.
 const chatsOnView = ref([]);
@@ -377,6 +384,25 @@ const uniqueInboxes = computed(() => {
   return [...new Set(selectedInboxes.value)];
 });
 
+const isScopedTicketRoute = computed(
+  () =>
+    hasAppliedFiltersOrActiveFolders.value ||
+    Boolean(
+      props.conversationInbox ||
+        props.teamId ||
+        props.label ||
+        props.conversationType ||
+        props.foldersId
+    )
+);
+
+const isTicketBoardAllMode = computed(
+  () =>
+    !isScopedTicketRoute.value &&
+    activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ALL &&
+    activeStatus.value === wootConstants.STATUS_TYPE.ALL
+);
+
 // ---------------------- Methods -----------------------
 function setFiltersFromUISettings() {
   const { conversations_filter_by: filterBy = {} } = uiSettings.value;
@@ -592,6 +618,159 @@ function resetAndFetchData() {
   fetchConversations();
 }
 
+function ensureTicketRoutingData() {
+  if (!agentList.value.length) {
+    store
+      .dispatch('agents/get')
+      .catch(() => useAlert(t('CHAT_LIST.TICKET_BOARD.LOAD_ROUTING_FAILED')));
+  }
+  if (!teamsList.value.length) {
+    store
+      .dispatch('teams/get')
+      .catch(() => useAlert(t('CHAT_LIST.TICKET_BOARD.LOAD_ROUTING_FAILED')));
+  }
+  if (!inboxesList.value.length) {
+    store
+      .dispatch('inboxes/get')
+      .catch(() => useAlert(t('CHAT_LIST.TICKET_BOARD.LOAD_ROUTING_FAILED')));
+  }
+}
+
+async function activateAllTicketsMode() {
+  const alreadyAllTickets =
+    !isScopedTicketRoute.value &&
+    activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ALL &&
+    activeStatus.value === wootConstants.STATUS_TYPE.ALL &&
+    activeSortBy.value ===
+      wootConstants.SORT_BY_TYPE.PRIORITY_DESC_CREATED_AT_ASC;
+
+  activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.ALL;
+  activeStatus.value = wootConstants.STATUS_TYPE.ALL;
+  activeSortBy.value = wootConstants.SORT_BY_TYPE.PRIORITY_DESC_CREATED_AT_ASC;
+  store.dispatch('setChatStatusFilter', activeStatus.value);
+  store.dispatch('setChatSortFilter', activeSortBy.value);
+
+  if (isScopedTicketRoute.value) {
+    await router
+      .push({ name: 'home', params: { accountId: route.params.accountId } })
+      .catch(() => null);
+  }
+
+  if (alreadyAllTickets) {
+    fetchConversations();
+    return;
+  }
+
+  resetAndFetchData();
+}
+
+function toggleTicketBoard() {
+  showTicketBoard.value = !showTicketBoard.value;
+  if (showTicketBoard.value) {
+    ensureTicketRoutingData();
+    activateAllTicketsMode();
+  }
+}
+
+function showAllTickets() {
+  ensureTicketRoutingData();
+  activateAllTicketsMode();
+}
+
+function openTicket(ticket) {
+  const {
+    params: { accountId },
+  } = route;
+
+  router.push({
+    path: frontendURL(
+      conversationUrl({
+        accountId,
+        activeInbox: activeInbox.value,
+        id: ticket.id,
+        label: props.label,
+        teamId: props.teamId,
+        conversationType: props.conversationType,
+        foldersId: props.foldersId,
+      })
+    ),
+  });
+}
+
+async function onTicketAssignAgent({ ticket, agentId }) {
+  const assigneeType = agentId ? 'User' : null;
+  const selectedAgent = agentId
+    ? agentList.value.find(agent => agent.id === agentId)
+    : null;
+
+  try {
+    const response = await ConversationApi.assignAgent({
+      conversationId: ticket.id,
+      agentId,
+      assigneeType,
+    });
+    store.dispatch('setCurrentChatAssignee', {
+      conversationId: ticket.id,
+      assignee: response.data,
+      assigneeType,
+    });
+    useAlert(
+      t('CHAT_LIST.TICKET_BOARD.ASSIGN_AGENT_SUCCESS', {
+        ticketId: ticket.id,
+        agentName:
+          selectedAgent?.name || t('CHAT_LIST.TICKET_BOARD.UNASSIGNED'),
+      })
+    );
+  } catch (error) {
+    useAlert(t('CHAT_LIST.TICKET_BOARD.ASSIGN_AGENT_FAILED'));
+  }
+}
+
+async function onTicketAssignTeam({ ticket, teamId }) {
+  const selectedTeam = teamId
+    ? teamsList.value.find(team => team.id === teamId)
+    : null;
+
+  try {
+    const response = await ConversationApi.assignTeam({
+      conversationId: ticket.id,
+      teamId,
+    });
+    store.dispatch('setCurrentChatTeam', {
+      conversationId: ticket.id,
+      team: response.data,
+    });
+    useAlert(
+      t('CHAT_LIST.TICKET_BOARD.ASSIGN_TEAM_SUCCESS', {
+        ticketId: ticket.id,
+        teamName: selectedTeam?.name || t('CHAT_LIST.TICKET_BOARD.NO_TEAM'),
+      })
+    );
+  } catch (error) {
+    useAlert(t('CHAT_LIST.TICKET_BOARD.ASSIGN_TEAM_FAILED'));
+  }
+}
+
+async function onTicketChangePriority({ ticket, priority }) {
+  try {
+    await ConversationApi.togglePriority({
+      conversationId: ticket.id,
+      priority,
+    });
+    store.dispatch('setCurrentChatPriority', {
+      conversationId: ticket.id,
+      priority,
+    });
+    useAlert(
+      t('CHAT_LIST.TICKET_BOARD.PRIORITY_SUCCESS', {
+        ticketId: ticket.id,
+      })
+    );
+  } catch (error) {
+    useAlert(t('CONVERSATION.PRIORITY.CHANGE_PRIORITY.FAILED'));
+  }
+}
+
 function loadMoreConversations() {
   if (hasCurrentPageEndReached.value || chatListLoading.value) {
     return;
@@ -793,6 +972,10 @@ function handleResolveWithAttributes({ attributes, context }) {
   }
 }
 
+function onTicketChangeStatus({ ticket, status }) {
+  handleResolveConversation(ticket.id, status, null);
+}
+
 function allSelectedConversationsStatus(status) {
   if (!selectedConversations.value.length) return false;
   return selectedConversations.value.every(item => {
@@ -891,7 +1074,11 @@ watch(conversationFilters, (newVal, oldVal) => {
     class="flex flex-col flex-shrink-0 conversations-list-wrap bg-n-surface-1 relative"
     :class="[
       { hidden: !showConversationList },
-      isOnExpandedLayout ? 'basis-full' : 'w-[340px] 2xl:w-[412px]',
+      isOnExpandedLayout
+        ? 'basis-full'
+        : showTicketBoard
+          ? 'w-full sm:w-[420px] xl:w-[520px] 2xl:w-[640px]'
+          : 'w-[340px] 2xl:w-[412px]',
     ]"
   >
     <slot />
@@ -903,11 +1090,13 @@ watch(conversationFilters, (newVal, oldVal) => {
       :is-on-expanded-layout="isOnExpandedLayout"
       :conversation-stats="conversationStats"
       :is-list-loading="chatListLoading && !conversationList.length"
+      :is-ticket-board-visible="showTicketBoard"
       @add-folders="onClickOpenAddFoldersModal"
       @delete-folders="onClickOpenDeleteFoldersModal"
       @filters-modal="onToggleAdvanceFiltersModal"
       @reset-filters="resetAndFetchData"
       @basic-filter-change="onBasicFilterChange"
+      @toggle-ticket-board="toggleTicketBoard"
     />
 
     <TeleportWithDirection
@@ -940,12 +1129,13 @@ watch(conversationFilters, (newVal, oldVal) => {
     />
 
     <p
-      v-if="!chatListLoading && !conversationList.length"
+      v-if="!showTicketBoard && !chatListLoading && !conversationList.length"
       class="flex overflow-auto justify-center items-center p-4"
     >
       {{ $t('CHAT_LIST.LIST.404') }}
     </p>
     <ConversationBulkActions
+      v-if="!showTicketBoard"
       :conversations="selectedConversations"
       :all-conversations-selected="allConversationsSelected"
       :selected-inboxes="uniqueInboxes"
@@ -955,7 +1145,25 @@ watch(conversationFilters, (newVal, oldVal) => {
       :class="isOnExpandedLayout && 'sm:!w-[24rem] !w-full'"
       @select-all-conversations="toggleSelectAll"
     />
+    <SupportTicketBoard
+      v-if="showTicketBoard"
+      :tickets="conversationList"
+      :agents="agentList"
+      :teams="teamsList"
+      :inboxes="inboxesList"
+      :is-loading="chatListLoading"
+      :is-all-mode="isTicketBoardAllMode"
+      :show-end-of-list-message="showEndOfListMessage"
+      @show-all-tickets="showAllTickets"
+      @open-ticket="openTicket"
+      @assign-agent="onTicketAssignAgent"
+      @assign-team="onTicketAssignTeam"
+      @change-priority="onTicketChangePriority"
+      @change-status="onTicketChangeStatus"
+      @load-more="loadMoreConversations"
+    />
     <ConversationList
+      v-else
       :conversation-list="conversationList"
       :is-loading="chatListLoading"
       :show-end-of-list-message="showEndOfListMessage"

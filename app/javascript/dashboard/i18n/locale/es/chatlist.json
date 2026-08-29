@@ -14,6 +14,39 @@
     "SEARCH": {
       "INPUT": "Búsqueda de Personas, Chats, Respuestas Salvadas .."
     },
+    "TICKET_BOARD": {
+      "TITLE": "Tickets de soporte",
+      "SUBTITLE": "Gestiona el responsable, equipo, prioridad y estado sin salir del chat.",
+      "TOGGLE_TOOLTIP": "Abrir tablero de tickets",
+      "SHOW_ALL": "Ver todos",
+      "ALL_MODE": "Vista todos",
+      "SEARCH_PLACEHOLDER": "Buscar por cliente, asunto, etiqueta o responsable",
+      "EMPTY": "No hay tickets que coincidan con esta vista.",
+      "OPEN": "Abrir",
+      "UNASSIGNED": "Sin responsable",
+      "NO_TEAM": "Sin equipo",
+      "LOAD_ROUTING_FAILED": "No se pudo cargar agentes, equipos o bandejas.",
+      "ASSIGN_AGENT_SUCCESS": "Ticket #{ticketId} asignado a {agentName}",
+      "ASSIGN_AGENT_FAILED": "No se pudo asignar el responsable.",
+      "ASSIGN_TEAM_SUCCESS": "Ticket #{ticketId} enviado a {teamName}",
+      "ASSIGN_TEAM_FAILED": "No se pudo asignar el equipo.",
+      "PRIORITY_SUCCESS": "Prioridad actualizada en ticket #{ticketId}",
+      "SUMMARY": {
+        "ALL": "Total",
+        "OPEN": "Abiertos",
+        "UNASSIGNED": "Sin resp.",
+        "URGENT": "Urgentes",
+        "ROUTED": "Enrutados"
+      },
+      "COLUMNS": {
+        "TICKET": "Ticket",
+        "STATUS": "Estado",
+        "PRIORITY": "Prioridad",
+        "RESPONSIBLE": "Responsable",
+        "TEAM": "Equipo",
+        "UPDATED": "Actualizado"
+      }
+    },
     "FILTER_ALL": "Todos",
     "ASSIGNEE_TYPE_TABS": {
       "me": "Mías",
