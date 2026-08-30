@@ -6,7 +6,7 @@ on:
       ref:
         description: Branch to deploy
         required: false
-        default: feature/support-ticket-routing-board
+        default: develop
       build_swap_mb:
         description: Temporary swap size in MB for the EC2 build
         required: false
