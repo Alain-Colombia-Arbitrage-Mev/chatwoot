@@ -362,9 +362,8 @@ RSpec.describe Captain::BaseTaskService do
       end
     end
 
-    it 'uses account OpenAI hook for editor task services' do
+    it 'uses account OpenAI hook for non-OpenRouter editor task services' do
       create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'hook-key' })
-      user = create(:user, account: account)
       follow_up_context = {
         'event_name' => 'professional',
         'original_context' => 'Original text',
@@ -374,7 +373,6 @@ RSpec.describe Captain::BaseTaskService do
       editor_services = [
         Captain::RewriteService.new(account: account, content: 'Text', operation: 'improve', conversation_display_id: conversation.display_id),
         Captain::SummaryService.new(account: account, conversation_display_id: conversation.display_id),
-        Captain::ReplySuggestionService.new(account: account, conversation_display_id: conversation.display_id, user: user),
         Captain::LabelSuggestionService.new(account: account, conversation_display_id: conversation.display_id),
         Captain::FollowUpService.new(
           account: account,
