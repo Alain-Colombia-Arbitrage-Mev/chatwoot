@@ -24,6 +24,10 @@ COPY app/javascript/dashboard/i18n/locale/en/settings.json /app/app/javascript/d
 COPY app/javascript/dashboard/i18n/locale/es/chatlist.json /app/app/javascript/dashboard/i18n/locale/es/chatlist.json
 COPY app/javascript/dashboard/i18n/locale/es/settings.json /app/app/javascript/dashboard/i18n/locale/es/settings.json
 COPY app/controllers/api/v1/accounts/agents_controller.rb /app/app/controllers/api/v1/accounts/agents_controller.rb
+COPY app/controllers/concerns/conversation_custom_attributes_concern.rb /app/app/controllers/concerns/conversation_custom_attributes_concern.rb
+COPY app/mailers/agent_notifications/conversation_notifications_mailer.rb /app/app/mailers/agent_notifications/conversation_notifications_mailer.rb
+COPY app/services/conversations/support_escalation_notification_service.rb /app/app/services/conversations/support_escalation_notification_service.rb
+COPY app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_escalation.liquid /app/app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_escalation.liquid
 COPY enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb /app/enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb
 COPY app/javascript/dashboard/routes/dashboard/conversation/conversation.routes.js /app/app/javascript/dashboard/routes/dashboard/conversation/conversation.routes.js
 COPY app/javascript/dashboard/routes/dashboard/conversation/ConversationView.vue /app/app/javascript/dashboard/routes/dashboard/conversation/ConversationView.vue
