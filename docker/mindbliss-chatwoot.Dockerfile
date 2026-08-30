@@ -18,10 +18,13 @@ COPY app/javascript/dashboard/components-next/sidebar/Sidebar.vue /app/app/javas
 COPY app/javascript/dashboard/components/ChatList.vue /app/app/javascript/dashboard/components/ChatList.vue
 COPY app/javascript/dashboard/components/ChatListHeader.vue /app/app/javascript/dashboard/components/ChatListHeader.vue
 COPY app/javascript/dashboard/components/SupportTicketBoard.vue /app/app/javascript/dashboard/components/SupportTicketBoard.vue
+COPY app/javascript/dashboard/routes/dashboard/settings/agents/AddAgent.vue /app/app/javascript/dashboard/routes/dashboard/settings/agents/AddAgent.vue
 COPY app/javascript/dashboard/i18n/locale/en/chatlist.json /app/app/javascript/dashboard/i18n/locale/en/chatlist.json
 COPY app/javascript/dashboard/i18n/locale/en/settings.json /app/app/javascript/dashboard/i18n/locale/en/settings.json
 COPY app/javascript/dashboard/i18n/locale/es/chatlist.json /app/app/javascript/dashboard/i18n/locale/es/chatlist.json
 COPY app/javascript/dashboard/i18n/locale/es/settings.json /app/app/javascript/dashboard/i18n/locale/es/settings.json
+COPY app/controllers/api/v1/accounts/agents_controller.rb /app/app/controllers/api/v1/accounts/agents_controller.rb
+COPY enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb /app/enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb
 COPY app/javascript/dashboard/routes/dashboard/conversation/conversation.routes.js /app/app/javascript/dashboard/routes/dashboard/conversation/conversation.routes.js
 COPY app/javascript/dashboard/routes/dashboard/conversation/ConversationView.vue /app/app/javascript/dashboard/routes/dashboard/conversation/ConversationView.vue
 COPY app/javascript/dashboard/store/modules/conversations/actions.js /app/app/javascript/dashboard/store/modules/conversations/actions.js

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -11,55 +11,22 @@ const emit = defineEmits(['close']);
 
 const store = useStore();
 const { t } = useI18n();
+const SUPPORT_AGENT_ROLE = 'agent';
 
 const agentName = ref('');
 const agentEmail = ref('');
-const selectedRoleId = ref('agent');
 
 const rules = {
   agentName: { required },
   agentEmail: { required, email },
-  selectedRoleId: { required },
 };
 
 const v$ = useVuelidate(rules, {
   agentName,
   agentEmail,
-  selectedRoleId,
 });
 
 const uiFlags = useMapGetter('agents/getUIFlags');
-const getCustomRoles = useMapGetter('customRole/getCustomRoles');
-
-const roles = computed(() => {
-  const defaultRoles = [
-    {
-      id: 'administrator',
-      name: 'administrator',
-      label: t('AGENT_MGMT.AGENT_TYPES.ADMINISTRATOR'),
-    },
-    {
-      id: 'agent',
-      name: 'agent',
-      label: t('AGENT_MGMT.AGENT_TYPES.AGENT'),
-    },
-  ];
-
-  const customRoles = getCustomRoles.value.map(role => ({
-    id: role.id,
-    name: `custom_${role.id}`,
-    label: role.name,
-  }));
-
-  return [...defaultRoles, ...customRoles];
-});
-
-const selectedRole = computed(() =>
-  roles.value.find(
-    role =>
-      role.id === selectedRoleId.value || role.name === selectedRoleId.value
-  )
-);
 
 const addAgent = async () => {
   v$.value.$touch();
@@ -69,13 +36,8 @@ const addAgent = async () => {
     const payload = {
       name: agentName.value,
       email: agentEmail.value,
+      role: SUPPORT_AGENT_ROLE,
     };
-
-    if (selectedRole.value.name.startsWith('custom_')) {
-      payload.custom_role_id = selectedRole.value.id;
-    } else {
-      payload.role = selectedRole.value.name;
-    }
 
     await store.dispatch('agents/create', payload);
     useAlert(t('AGENT_MGMT.ADD.API.SUCCESS_MESSAGE'));
@@ -118,20 +80,6 @@ const addAgent = async () => {
             :placeholder="$t('AGENT_MGMT.ADD.FORM.NAME.PLACEHOLDER')"
             @input="v$.agentName.$touch"
           />
-        </label>
-      </div>
-
-      <div class="w-full">
-        <label :class="{ error: v$.selectedRoleId.$error }">
-          {{ $t('AGENT_MGMT.ADD.FORM.AGENT_TYPE.LABEL') }}
-          <select v-model="selectedRoleId" @change="v$.selectedRoleId.$touch">
-            <option v-for="role in roles" :key="role.id" :value="role.id">
-              {{ role.label }}
-            </option>
-          </select>
-          <span v-if="v$.selectedRoleId.$error" class="message">
-            {{ $t('AGENT_MGMT.ADD.FORM.AGENT_TYPE.ERROR') }}
-          </span>
         </label>
       </div>
 
