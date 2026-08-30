@@ -41,6 +41,11 @@ The production override is versioned as `docker-compose.support-crm.override.yam
 and points `rails` and `sidekiq` to the custom image. The upgrade script rewrites
 that override with the exact image tag it built.
 
+By default the script uses `docker/mindbliss-chatwoot.Dockerfile`, which starts
+from the official `chatwoot/chatwoot:v<VERSION_CW>` image, copies the Mindbliss
+CRM frontend files and recompiles assets. This keeps upstream runtime layers
+current without rebuilding every native gem on the EC2 for each minor release.
+
 ## Deploy
 
 From the clean build worktree on the EC2:
@@ -54,7 +59,7 @@ deployment/mindbliss_chatwoot_upgrade.sh
 The script:
 
 1. Refuses to build if the source worktree has uncommitted changes.
-2. Builds a production image from `docker/Dockerfile`.
+2. Builds a production image from `docker/mindbliss-chatwoot.Dockerfile`.
 3. Tags it as `chatwoot-support-crm:v<VERSION_CW>-<git-sha>`.
 4. Writes `/opt/chatwoot/source/docker-compose.support-crm.override.yaml`.
 5. Runs `bundle exec rails db:chatwoot_prepare`.
@@ -75,3 +80,9 @@ curl -fsS http://127.0.0.1:9108/healthz
 
 Keep `CHATWOOT_AI_PUBLIC_REPLIES=false` until support agents finish manual QA
 for each model/provider change.
+
+For a full source build instead of the overlay build, pass:
+
+```bash
+DOCKERFILE=docker/Dockerfile deployment/mindbliss_chatwoot_upgrade.sh
+```

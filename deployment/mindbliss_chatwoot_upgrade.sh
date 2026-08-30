@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_DIR="${SOURCE_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 DEPLOY_DIR="${DEPLOY_DIR:-/opt/chatwoot/source}"
-DOCKERFILE="${DOCKERFILE:-docker/Dockerfile}"
+DOCKERFILE="${DOCKERFILE:-docker/mindbliss-chatwoot.Dockerfile}"
 COMPOSE_PROJECT_DIR="${COMPOSE_PROJECT_DIR:-$DEPLOY_DIR}"
 CHATWOOT_VERSION="${CHATWOOT_VERSION:-$(tr -d '[:space:]' < "$SOURCE_DIR/VERSION_CW")}"
 SHORT_SHA="$(git -C "$SOURCE_DIR" rev-parse --short=12 HEAD)"
@@ -30,7 +30,12 @@ if ! git -C "$SOURCE_DIR" diff --quiet || ! git -C "$SOURCE_DIR" diff --cached -
 fi
 
 echo "Building $IMAGE_TAG from $SOURCE_DIR ($SHORT_SHA)"
-docker build -f "$SOURCE_DIR/$DOCKERFILE" -t "$IMAGE_TAG" "$SOURCE_DIR"
+docker build \
+  --build-arg "CHATWOOT_VERSION=$CHATWOOT_VERSION" \
+  --build-arg "BUILD_SHA=$SHORT_SHA" \
+  -f "$SOURCE_DIR/$DOCKERFILE" \
+  -t "$IMAGE_TAG" \
+  "$SOURCE_DIR"
 
 cat > "$OVERRIDE_FILE" <<YAML
 services:
