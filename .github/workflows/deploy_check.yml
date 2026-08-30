@@ -1,14 +1,21 @@
-## github action to check deployment success
-## curl the deployment url and check for 200 status
-## deployment url will be of the form chatwoot-pr-<pr_number>.herokuapp.com
 name: Deploy Check
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: Deployment base URL or /api URL to check
+        required: false
+        default: ''
+      initial_delay_seconds:
+        description: Seconds to wait before the first health check
+        required: false
+        default: '0'
 
-# If two pushes happen within a short time in the same PR, cancel the run of the oldest push
+# If two pushes happen within a short time in the same PR, cancel the run of the oldest push.
 concurrency:
-  group: pr-${{ github.workflow }}-${{ github.head_ref }}
+  group: pr-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -19,34 +26,96 @@ jobs:
     name: Check Deployment
     runs-on: ubuntu-latest
     steps:
-      - name: Install jq
-        run: sudo apt-get install -y jq
-      - name: Print Deployment URL
-        run: echo "https://chatwoot-pr-${{ github.event.pull_request.number }}.herokuapp.com"
-      - name: Check Deployment Status
+      - name: Resolve deployment URL
+        id: deployment
+        env:
+          CONFIGURED_DEPLOYMENT_URL: ${{ vars.DEPLOY_CHECK_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_DEPLOYMENT_URL: ${{ github.event.inputs.deployment_url }}
+          INPUT_INITIAL_DELAY_SECONDS: ${{ github.event.inputs.initial_delay_seconds }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
         run: |
+          set -euo pipefail
+
+          deployment_url="${INPUT_DEPLOYMENT_URL:-${CONFIGURED_DEPLOYMENT_URL:-}}"
+          initial_delay_seconds="${INPUT_INITIAL_DELAY_SECONDS:-0}"
+
+          if [[ -z "$deployment_url" && "$REPOSITORY" == "chatwoot/chatwoot" && "$EVENT_NAME" == "pull_request" && -n "$PR_NUMBER" ]]; then
+            deployment_url="https://chatwoot-pr-${PR_NUMBER}.herokuapp.com"
+            initial_delay_seconds="${INPUT_INITIAL_DELAY_SECONDS:-600}"
+          fi
+
+          if [[ -z "$deployment_url" ]]; then
+            echo "No deployment URL configured. Skipping deploy check for this repository."
+            echo "Set DEPLOY_CHECK_URL as a repository variable to enable this check."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          deployment_url="${deployment_url%/}"
+          if [[ "$deployment_url" != */api ]]; then
+            deployment_url="${deployment_url}/api"
+          fi
+
+          if [[ ! "$initial_delay_seconds" =~ ^[0-9]+$ ]]; then
+            echo "::error::initial_delay_seconds must be a non-negative integer"
+            exit 1
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "initial_delay_seconds=$initial_delay_seconds" >> "$GITHUB_OUTPUT"
+          {
+            echo 'url<<EOF'
+            echo "$deployment_url"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install jq
+        if: steps.deployment.outputs.skip != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Print deployment URL
+        if: steps.deployment.outputs.skip != 'true'
+        run: echo "${{ steps.deployment.outputs.url }}"
+
+      - name: Check deployment status
+        if: steps.deployment.outputs.skip != 'true'
+        env:
+          DEPLOYMENT_API_URL: ${{ steps.deployment.outputs.url }}
+          INITIAL_DELAY_SECONDS: ${{ steps.deployment.outputs.initial_delay_seconds }}
+        run: |
+          set -euo pipefail
+
           max_attempts=10
           attempt=1
-          status_code=0
-          echo "Waiting for review app to be deployed/redeployed, trying in  10 minutes..."
-          sleep 600
-          while [ $attempt -le $max_attempts ]; do
-            response=$(curl -s -o /dev/null -w "%{http_code}" https://chatwoot-pr-${{ github.event.pull_request.number }}.herokuapp.com/api)
-            status_code=$(echo $response | head -n   1)
-            if [ $status_code -eq   200 ]; then
-              body=$(curl -s https://chatwoot-pr-${{ github.event.pull_request.number }}.herokuapp.com/api)
-              if echo "$body" | jq -e '.version and .timestamp and .queue_services == "ok" and .data_services == "ok"' > /dev/null; then
-                echo "Deployment successful"
-                exit 0
-              else
-                echo "Deployment status unknown, retrying in   3 minutes..."
-                sleep 180
-              fi
-            else
-              echo "Waiting for review app to be ready, retrying in  3 minutes..."
+          body_file="$(mktemp)"
+
+          if (( INITIAL_DELAY_SECONDS > 0 )); then
+            echo "Waiting ${INITIAL_DELAY_SECONDS}s before the first deployment check..."
+            sleep "$INITIAL_DELAY_SECONDS"
+          fi
+
+          while (( attempt <= max_attempts )); do
+            echo "Checking deployment health, attempt ${attempt}/${max_attempts}..."
+            status_code="$(curl -sS -o "$body_file" -w "%{http_code}" "$DEPLOYMENT_API_URL" || true)"
+
+            if [[ "$status_code" == "200" ]] && jq -e '.version and .timestamp and .queue_services == "ok" and .data_services == "ok"' "$body_file" > /dev/null; then
+              echo "Deployment successful"
+              cat "$body_file"
+              exit 0
+            fi
+
+            echo "Deployment not ready. HTTP status: ${status_code}"
+            cat "$body_file" || true
+            attempt=$((attempt + 1))
+
+            if (( attempt <= max_attempts )); then
               sleep 180
-              attempt=$((attempt +  1))
             fi
           done
-          echo "Deployment failed after $max_attempts attempts"
-          exit  1
+
+          echo "Deployment failed after ${max_attempts} attempts"
+          exit 1
