@@ -39,7 +39,11 @@ class Captain::Tools::SearchReplyDocumentationService < RubyLLM::Tool
   end
 
   def no_verified_knowledge_message
-    'No verified documentation or FAQ memory was found for this query. Do not answer from model memory; draft a bounded reply that says the available information is not enough to confirm the answer.'
+    [
+      'No verified documentation or FAQ memory was found for this query.',
+      'Do not answer from model memory.',
+      'Draft a bounded reply that says the available information is not enough to confirm the answer.'
+    ].join(' ')
   end
 
   def format_response(response)

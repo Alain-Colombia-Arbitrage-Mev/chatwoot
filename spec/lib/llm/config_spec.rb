@@ -43,7 +43,7 @@ RSpec.describe Llm::Config do
 
   describe '.with_api_key' do
     it 'configures the native OpenRouter provider for OpenRouter models' do
-      config = double('RubyLLM config')
+      config = instance_double(RubyLLM::Configuration)
 
       allow(described_class).to receive(:initialize!)
       allow(RubyLLM).to receive(:context).and_yield(config).and_return(:context)
@@ -57,7 +57,7 @@ RSpec.describe Llm::Config do
     end
 
     it 'normalizes and passes an OpenRouter base URL when configured' do
-      config = double('RubyLLM config')
+      config = instance_double(RubyLLM::Configuration)
 
       allow(described_class).to receive(:initialize!)
       allow(RubyLLM).to receive(:context).and_yield(config).and_return(:context)

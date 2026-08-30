@@ -43,7 +43,11 @@ class Captain::Tools::FaqLookupTool < Captain::Tools::BasePublicTool
   end
 
   def no_verified_knowledge_message
-    'No verified FAQ or RAG memory was found for this query. Do not answer from model memory; say the available information is not enough to confirm the answer.'
+    [
+      'No verified FAQ or RAG memory was found for this query.',
+      'Do not answer from model memory.',
+      'Say the available information is not enough to confirm the answer.'
+    ].join(' ')
   end
 
   def format_response(tool_context, response)

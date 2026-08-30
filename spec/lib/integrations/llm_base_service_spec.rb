@@ -39,8 +39,8 @@ RSpec.describe Integrations::LlmBaseService do
       create(:installation_config, name: 'CAPTAIN_OPENROUTER_API_KEY', value: 'openrouter-key')
 
       openrouter_body = { model: 'upstage/solar-pro4', messages: [{ role: 'user', content: 'Hello' }] }.to_json
-      mock_context = double('RubyLLM context')
-      mock_chat = double('RubyLLM chat')
+      mock_context = instance_double(RubyLLM::Context)
+      mock_chat = instance_double(RubyLLM::Chat)
       mock_response = instance_double(RubyLLM::Message, content: 'Draft reply', input_tokens: 3, output_tokens: 4)
 
       expect(Llm::Config).to receive(:with_api_key)

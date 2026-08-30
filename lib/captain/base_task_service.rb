@@ -43,13 +43,13 @@ class Captain::BaseTaskService
     model = resolved_model(model: model, feature: feature)
     provider = Llm::Models.provider_for(model)
     credential = llm_credential(provider: provider)
-    return { error: I18n.t('captain.api_key_missing'), error_code: 401 } unless credential.present?
+    return { error: I18n.t('captain.api_key_missing'), error_code: 401 } if credential.blank?
 
     instrumentation_params = build_instrumentation_params(model, messages)
     instrumentation_method = tools.any? ? :instrument_tool_session : :instrument_llm_call
 
     response = send(instrumentation_method, instrumentation_params) do
-      execute_ruby_llm_request(model: model, messages: messages, schema: schema, tools: tools, provider: provider, credential: credential)
+      execute_ruby_llm_request(model: model, messages: messages, schema: schema, tools: tools, credential: credential.merge(provider: provider))
     end
 
     return response unless build_follow_up_context? && response[:message].present?
@@ -66,8 +66,8 @@ class Captain::BaseTaskService
     route[:model]
   end
 
-  def execute_ruby_llm_request(model:, messages:, provider:, credential:, schema: nil, tools: [])
-    Llm::Config.with_api_key(credential[:api_key], api_base: api_base, provider: provider) do |context|
+  def execute_ruby_llm_request(model:, messages:, credential:, schema: nil, tools: [])
+    Llm::Config.with_api_key(credential[:api_key], api_base: api_base, provider: credential[:provider]) do |context|
       chat = build_chat(context, model: model, messages: messages, schema: schema, tools: tools)
 
       conversation_messages = messages.reject { |m| m[:role] == 'system' }
@@ -167,9 +167,7 @@ class Captain::BaseTaskService
     llm_credential&.dig(:source) != :hook
   end
 
-  def api_key_configured?(provider: nil)
-    llm_credential(provider: provider).present?
-  end
+  def api_key_configured?(provider: nil) = llm_credential(provider: provider).present?
 
   def api_key
     llm_credential&.dig(:api_key)
