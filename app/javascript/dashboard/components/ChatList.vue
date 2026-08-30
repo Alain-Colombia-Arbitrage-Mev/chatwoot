@@ -771,6 +771,55 @@ async function onTicketChangePriority({ ticket, priority }) {
   }
 }
 
+function escalationAttributes(escalated) {
+  const updatedAt = new Date().toISOString();
+  return {
+    support_escalated: escalated,
+    support_escalation_state: escalated ? 'escalated' : 'not_escalated',
+    support_escalated_at: escalated ? updatedAt : null,
+    support_escalation_updated_at: updatedAt,
+    support_escalation_updated_by_id: currentUser.value?.id || null,
+    support_escalation_updated_by_name: currentUser.value?.name || '',
+  };
+}
+
+async function onTicketChangeEscalation({ ticket, escalated }) {
+  try {
+    await store.dispatch('updateCustomAttributes', {
+      conversationId: ticket.id,
+      customAttributes: escalationAttributes(escalated),
+    });
+
+    if (escalated) {
+      if (ticket.status !== wootConstants.STATUS_TYPE.OPEN) {
+        await store.dispatch('toggleStatus', {
+          conversationId: ticket.id,
+          status: wootConstants.STATUS_TYPE.OPEN,
+          snoozedUntil: null,
+        });
+      }
+
+      if (ticket.priority !== 'urgent') {
+        await store.dispatch('assignPriority', {
+          conversationId: ticket.id,
+          priority: 'urgent',
+        });
+      }
+    }
+
+    const message = escalated
+      ? t('CHAT_LIST.TICKET_BOARD.ESCALATION.SUCCESS', {
+          ticketId: ticket.id,
+        })
+      : t('CHAT_LIST.TICKET_BOARD.ESCALATION.CLEARED', {
+          ticketId: ticket.id,
+        });
+    useAlert(message);
+  } catch (error) {
+    useAlert(t('CHAT_LIST.TICKET_BOARD.ESCALATION.FAILED'));
+  }
+}
+
 function loadMoreConversations() {
   if (hasCurrentPageEndReached.value || chatListLoading.value) {
     return;
@@ -1160,6 +1209,7 @@ watch(conversationFilters, (newVal, oldVal) => {
       @assign-team="onTicketAssignTeam"
       @change-priority="onTicketChangePriority"
       @change-status="onTicketChangeStatus"
+      @change-escalation="onTicketChangeEscalation"
       @load-more="loadMoreConversations"
     />
     <ConversationList

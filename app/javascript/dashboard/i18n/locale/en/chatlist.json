@@ -16,10 +16,12 @@
     },
     "TICKET_BOARD": {
       "TITLE": "Support tickets",
-      "SUBTITLE": "Manage owner, team, priority and status without leaving chat.",
+      "CRM_TITLE": "Support CRM",
+      "SUBTITLE": "Track pending, resolved and escalated cases from one view.",
       "TOGGLE_TOOLTIP": "Open ticket board",
       "SHOW_ALL": "View all",
       "ALL_MODE": "All view",
+      "FILTER_ARIA": "Support case filters",
       "SEARCH_PLACEHOLDER": "Search by customer, subject, label or owner",
       "EMPTY": "No tickets match this view.",
       "OPEN": "Open",
@@ -31,9 +33,31 @@
       "ASSIGN_TEAM_SUCCESS": "Ticket #{ticketId} routed to {teamName}",
       "ASSIGN_TEAM_FAILED": "Could not assign the team.",
       "PRIORITY_SUCCESS": "Priority updated on ticket #{ticketId}",
+      "ESCALATION": {
+        "ESCALATED": "Escalated",
+        "NOT_ESCALATED": "Not escalated",
+        "ESCALATE": "Escalate",
+        "MARK_NOT_ESCALATED": "No escalation",
+        "NEEDS_ROUTING": "Needs owner/team",
+        "SUCCESS": "Ticket #{ticketId} escalated",
+        "CLEARED": "Ticket #{ticketId} marked as not escalated",
+        "FAILED": "Could not update escalation."
+      },
+      "FILTERS": {
+        "ACTIVE": "Active",
+        "PENDING": "Pending",
+        "RESOLVED": "Resolved",
+        "ESCALATED": "Escalated",
+        "UNASSIGNED": "Unassigned",
+        "ALL": "All"
+      },
       "SUMMARY": {
         "ALL": "Total",
+        "ACTIVE": "Active",
         "OPEN": "Open",
+        "PENDING": "Pending",
+        "RESOLVED": "Resolved",
+        "ESCALATED": "Escalated",
         "UNASSIGNED": "Unassigned",
         "URGENT": "Urgent",
         "ROUTED": "Routed"
@@ -42,6 +66,7 @@
         "TICKET": "Ticket",
         "STATUS": "Status",
         "PRIORITY": "Priority",
+        "ESCALATION": "Escalation",
         "RESPONSIBLE": "Owner",
         "TEAM": "Team",
         "UPDATED": "Updated"

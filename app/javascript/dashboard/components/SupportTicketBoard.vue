@@ -27,12 +27,15 @@ const emit = defineEmits([
   'assignTeam',
   'changePriority',
   'changeStatus',
+  'changeEscalation',
   'loadMore',
 ]);
 
 const { t } = useI18n();
 const searchQuery = ref('');
+const activeBoardFilter = ref('active');
 
+const ACTIVE_STATUSES = new Set(['open', 'pending', 'snoozed']);
 const STATUS_OPTIONS = ['open', 'pending', 'snoozed', 'resolved'];
 const PRIORITY_OPTIONS = ['', 'urgent', 'high', 'medium', 'low'];
 const PRIORITY_RANK = {
@@ -41,6 +44,13 @@ const PRIORITY_RANK = {
   medium: 2,
   low: 3,
 };
+const ESCALATION_LABELS = new Set(['mb_ticket_escalated', 'mb_ai_escalate']);
+const ESCALATION_TRUE_ATTRIBUTES = [
+  'support_escalated',
+  'mb_escalated',
+  'ai_escalate',
+];
+const ESCALATION_FALSE_ATTRIBUTES = ['support_escalated', 'mb_escalated'];
 
 function ticketAssigneeId(ticket) {
   return Number(ticket.meta?.assignee?.id || ticket.assignee_id) || 0;
@@ -74,6 +84,10 @@ function ticketLabels(ticket) {
     .slice(0, 3);
 }
 
+function normalizedLabels(ticket) {
+  return (ticket.labels || []).map(label => String(label).toLowerCase());
+}
+
 function activityAt(ticket) {
   return Number(ticket.timestamp || ticket.last_activity_at || 0);
 }
@@ -82,22 +96,40 @@ function priorityRank(ticket) {
   return PRIORITY_RANK[ticket.priority] ?? 9;
 }
 
-function searchableText(ticket) {
-  const contact = ticketContact(ticket);
-  return [
-    ticket.id,
-    contact.name,
-    contact.email,
-    contact.phone_number,
-    ticketSubject(ticket),
-    ticketInbox(ticket)?.name,
-    ticket.meta?.assignee?.name,
-    ticket.meta?.team?.name,
-    ...(ticket.labels || []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+function ticketIsExplicitlyNotEscalated(ticket) {
+  const attrs = ticket.custom_attributes || {};
+  if (
+    String(attrs.support_escalation_state || '').toLowerCase() ===
+    'not_escalated'
+  ) {
+    return true;
+  }
+  return ESCALATION_FALSE_ATTRIBUTES.some(key => attrs[key] === false);
+}
+
+function ticketIsEscalated(ticket) {
+  if (ticketIsExplicitlyNotEscalated(ticket)) return false;
+
+  const attrs = ticket.custom_attributes || {};
+  const hasEscalationAttribute = ESCALATION_TRUE_ATTRIBUTES.some(
+    key => attrs[key] === true || attrs[key] === 'true'
+  );
+  if (
+    hasEscalationAttribute ||
+    String(attrs.support_escalation_state || '').toLowerCase() === 'escalated'
+  ) {
+    return true;
+  }
+
+  return normalizedLabels(ticket).some(label => ESCALATION_LABELS.has(label));
+}
+
+function ticketNeedsRouting(ticket) {
+  return (
+    ticketIsEscalated(ticket) &&
+    !ticketAssigneeId(ticket) &&
+    !ticketTeamId(ticket)
+  );
 }
 
 function ticketIdLabel(ticket) {
@@ -139,54 +171,111 @@ function priorityLabel(priority) {
   }
 }
 
+function escalationLabel(ticket) {
+  return ticketIsEscalated(ticket)
+    ? t('CHAT_LIST.TICKET_BOARD.ESCALATION.ESCALATED')
+    : t('CHAT_LIST.TICKET_BOARD.ESCALATION.NOT_ESCALATED');
+}
+
+function searchableText(ticket) {
+  const contact = ticketContact(ticket);
+  return [
+    ticket.id,
+    contact.name,
+    contact.email,
+    contact.phone_number,
+    ticketSubject(ticket),
+    ticketInbox(ticket)?.name,
+    ticket.meta?.assignee?.name,
+    ticket.meta?.team?.name,
+    escalationLabel(ticket),
+    ...(ticket.labels || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function escalationIcon(ticket) {
+  return ticketIsEscalated(ticket)
+    ? 'i-lucide-triangle-alert'
+    : 'i-lucide-shield-check';
+}
+
+function escalationBadgeClass(ticket) {
+  return ticketIsEscalated(ticket)
+    ? 'bg-n-amber-3 text-n-amber-11 outline-n-amber-7'
+    : 'bg-n-slate-3 text-n-slate-11 outline-n-weak';
+}
+
+function matchesBoardFilter(ticket) {
+  switch (activeBoardFilter.value) {
+    case 'active':
+      return ACTIVE_STATUSES.has(ticket.status);
+    case 'pending':
+      return ticket.status === 'pending';
+    case 'resolved':
+      return ticket.status === 'resolved';
+    case 'escalated':
+      return ticketIsEscalated(ticket);
+    case 'unassigned':
+      return !ticketAssigneeId(ticket);
+    case 'all':
+      return true;
+    default:
+      return true;
+  }
+}
+
 const routableAgents = computed(() =>
   props.agents.filter(agent => agent.confirmed !== false)
 );
 
-const visibleTickets = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  const tickets = query
-    ? props.tickets.filter(ticket => searchableText(ticket).includes(query))
-    : props.tickets;
+const activeCasesCount = computed(
+  () =>
+    props.tickets.filter(ticket => ACTIVE_STATUSES.has(ticket.status)).length
+);
 
-  return [...tickets].sort((a, b) => {
-    const priorityDiff = priorityRank(a) - priorityRank(b);
-    if (priorityDiff !== 0) return priorityDiff;
-    return activityAt(b) - activityAt(a);
-  });
-});
+const pendingCount = computed(
+  () => props.tickets.filter(ticket => ticket.status === 'pending').length
+);
 
-const openTicketsCount = computed(
-  () => props.tickets.filter(ticket => ticket.status === 'open').length
+const resolvedCount = computed(
+  () => props.tickets.filter(ticket => ticket.status === 'resolved').length
+);
+
+const escalatedCount = computed(
+  () => props.tickets.filter(ticket => ticketIsEscalated(ticket)).length
 );
 
 const unassignedCount = computed(
   () => props.tickets.filter(ticket => !ticketAssigneeId(ticket)).length
 );
 
-const urgentCount = computed(
-  () => props.tickets.filter(ticket => ticket.priority === 'urgent').length
-);
-
-const routedCount = computed(
-  () =>
-    props.tickets.filter(
-      ticket => ticketAssigneeId(ticket) || ticketTeamId(ticket)
-    ).length
-);
-
 const summaryItems = computed(() => [
   {
-    key: 'all',
-    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.ALL'),
-    value: props.tickets.length,
-    icon: 'i-lucide-list-checks',
+    key: 'active',
+    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.ACTIVE'),
+    value: activeCasesCount.value,
+    icon: 'i-lucide-inbox',
   },
   {
-    key: 'open',
-    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.OPEN'),
-    value: openTicketsCount.value,
-    icon: 'i-lucide-inbox',
+    key: 'pending',
+    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.PENDING'),
+    value: pendingCount.value,
+    icon: 'i-lucide-clock-3',
+  },
+  {
+    key: 'resolved',
+    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.RESOLVED'),
+    value: resolvedCount.value,
+    icon: 'i-lucide-circle-check',
+  },
+  {
+    key: 'escalated',
+    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.ESCALATED'),
+    value: escalatedCount.value,
+    icon: 'i-lucide-triangle-alert',
   },
   {
     key: 'unassigned',
@@ -194,19 +283,74 @@ const summaryItems = computed(() => [
     value: unassignedCount.value,
     icon: 'i-lucide-user-round-x',
   },
+]);
+
+function boardFilterValue(key) {
+  switch (key) {
+    case 'active':
+      return activeCasesCount.value;
+    case 'pending':
+      return pendingCount.value;
+    case 'resolved':
+      return resolvedCount.value;
+    case 'escalated':
+      return escalatedCount.value;
+    case 'unassigned':
+      return unassignedCount.value;
+    default:
+      return props.tickets.length;
+  }
+}
+
+const boardFilterItems = computed(() => [
   {
-    key: 'urgent',
-    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.URGENT'),
-    value: urgentCount.value,
-    icon: 'i-lucide-siren',
+    key: 'active',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.ACTIVE'),
+    value: boardFilterValue('active'),
   },
   {
-    key: 'routed',
-    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.ROUTED'),
-    value: routedCount.value,
-    icon: 'i-lucide-send-horizontal',
+    key: 'pending',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.PENDING'),
+    value: boardFilterValue('pending'),
+  },
+  {
+    key: 'resolved',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.RESOLVED'),
+    value: boardFilterValue('resolved'),
+  },
+  {
+    key: 'escalated',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.ESCALATED'),
+    value: boardFilterValue('escalated'),
+  },
+  {
+    key: 'unassigned',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.UNASSIGNED'),
+    value: boardFilterValue('unassigned'),
+  },
+  {
+    key: 'all',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.ALL'),
+    value: boardFilterValue('all'),
   },
 ]);
+
+const visibleTickets = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  const tickets = props.tickets.filter(ticket => {
+    if (!matchesBoardFilter(ticket)) return false;
+    return query ? searchableText(ticket).includes(query) : true;
+  });
+
+  return [...tickets].sort((a, b) => {
+    const escalationDiff =
+      Number(ticketIsEscalated(b)) - Number(ticketIsEscalated(a));
+    if (escalationDiff !== 0) return escalationDiff;
+    const priorityDiff = priorityRank(a) - priorityRank(b);
+    if (priorityDiff !== 0) return priorityDiff;
+    return activityAt(b) - activityAt(a);
+  });
+});
 
 function onAgentChange(ticket, event) {
   const agentId = Number(event.target.value) || null;
@@ -231,6 +375,10 @@ function onStatusChange(ticket, event) {
     status: event.target.value,
   });
 }
+
+function onEscalationChange(ticket, escalated) {
+  emit('changeEscalation', { ticket, escalated });
+}
 </script>
 
 <template>
@@ -241,11 +389,11 @@ function onStatusChange(ticket, event) {
           <span
             class="inline-flex items-center justify-center flex-shrink-0 rounded-lg size-8 bg-n-brand/10 text-n-brand"
           >
-            <Icon icon="i-lucide-ticket-check" class="size-4" />
+            <Icon icon="i-lucide-briefcase" class="size-4" />
           </span>
           <div class="min-w-0">
             <h2 class="m-0 text-sm font-semibold truncate text-n-slate-12">
-              {{ t('CHAT_LIST.TICKET_BOARD.TITLE') }}
+              {{ t('CHAT_LIST.TICKET_BOARD.CRM_TITLE') }}
             </h2>
             <p class="m-0 mt-0.5 text-xs leading-5 text-n-slate-11">
               {{ t('CHAT_LIST.TICKET_BOARD.SUBTITLE') }}
@@ -286,6 +434,39 @@ function onStatusChange(ticket, event) {
         </div>
       </div>
 
+      <div
+        class="flex flex-wrap items-center gap-1 mt-3"
+        role="tablist"
+        :aria-label="t('CHAT_LIST.TICKET_BOARD.FILTER_ARIA')"
+      >
+        <button
+          v-for="item in boardFilterItems"
+          :key="item.key"
+          type="button"
+          class="inline-flex items-center min-w-0 h-7 gap-1.5 px-2 text-xs font-medium transition-colors border-0 rounded-lg outline outline-1"
+          :class="
+            activeBoardFilter === item.key
+              ? 'bg-n-brand text-white outline-transparent'
+              : 'bg-n-alpha-black2 text-n-slate-11 outline-n-weak hover:bg-n-alpha-2'
+          "
+          role="tab"
+          :aria-selected="activeBoardFilter === item.key"
+          @click="activeBoardFilter = item.key"
+        >
+          <span class="truncate">{{ item.label }}</span>
+          <span
+            class="px-1.5 py-0.5 rounded-md text-xxs"
+            :class="
+              activeBoardFilter === item.key
+                ? 'bg-white/20 text-white'
+                : 'bg-n-slate-3 text-n-slate-11'
+            "
+          >
+            {{ formatNumber(item.value) }}
+          </span>
+        </button>
+      </div>
+
       <NextInput
         v-model="searchQuery"
         type="search"
@@ -304,7 +485,7 @@ function onStatusChange(ticket, event) {
     </div>
 
     <div class="flex-1 min-h-0 overflow-auto">
-      <table class="min-w-[720px] w-full border-separate border-spacing-0">
+      <table class="min-w-[900px] w-full border-separate border-spacing-0">
         <thead class="sticky top-0 z-10 bg-n-surface-1">
           <tr class="text-left border-b border-n-weak">
             <th
@@ -321,6 +502,11 @@ function onStatusChange(ticket, event) {
               class="px-2 py-2 text-xxs font-semibold uppercase text-n-slate-11"
             >
               {{ t('CHAT_LIST.TICKET_BOARD.COLUMNS.PRIORITY') }}
+            </th>
+            <th
+              class="px-2 py-2 text-xxs font-semibold uppercase text-n-slate-11"
+            >
+              {{ t('CHAT_LIST.TICKET_BOARD.COLUMNS.ESCALATION') }}
             </th>
             <th
               class="px-2 py-2 text-xxs font-semibold uppercase text-n-slate-11"
@@ -342,13 +528,13 @@ function onStatusChange(ticket, event) {
         </thead>
         <tbody>
           <tr v-if="isLoading && !tickets.length">
-            <td colspan="7" class="px-3 py-6 text-center text-n-slate-11">
+            <td colspan="8" class="px-3 py-6 text-center text-n-slate-11">
               <Spinner class="inline-block text-n-brand" />
             </td>
           </tr>
           <tr v-else-if="!visibleTickets.length">
             <td
-              colspan="7"
+              colspan="8"
               class="px-3 py-6 text-center text-sm text-n-slate-11"
             >
               {{ t('CHAT_LIST.TICKET_BOARD.EMPTY') }}
@@ -358,12 +544,13 @@ function onStatusChange(ticket, event) {
             v-for="ticket in visibleTickets"
             :key="ticket.id"
             class="group border-b cursor-pointer border-n-weak hover:bg-n-alpha-1"
+            :class="{ 'bg-n-amber-2': ticketNeedsRouting(ticket) }"
             @click="emit('openTicket', ticket)"
           >
             <td class="px-3 py-3 align-top border-b border-n-weak">
               <div class="flex items-start min-w-0 gap-2">
                 <span
-                  class="inline-flex items-center justify-center flex-shrink-0 mt-0.5 rounded-md size-7 bg-n-slate-3 text-n-slate-11"
+                  class="inline-flex items-center justify-center flex-shrink-0 min-w-8 h-7 px-1.5 mt-0.5 rounded-md bg-n-slate-3 text-xxs font-medium text-n-slate-11"
                 >
                   {{ ticketIdLabel(ticket) }}
                 </span>
@@ -427,6 +614,49 @@ function onStatusChange(ticket, event) {
                   {{ priorityLabel(priority) }}
                 </option>
               </select>
+            </td>
+            <td class="px-2 py-3 align-top border-b border-n-weak" @click.stop>
+              <div class="flex flex-col items-start gap-2">
+                <span
+                  class="inline-flex items-center max-w-full gap-1.5 px-2 py-1 rounded-md text-xxs font-medium outline outline-1"
+                  :class="escalationBadgeClass(ticket)"
+                >
+                  <Icon
+                    :icon="escalationIcon(ticket)"
+                    class="flex-shrink-0 size-3"
+                  />
+                  <span class="truncate">{{ escalationLabel(ticket) }}</span>
+                </span>
+                <span
+                  v-if="ticketNeedsRouting(ticket)"
+                  class="inline-flex items-center max-w-full gap-1 px-2 py-0.5 rounded-md bg-n-ruby-3 text-xxs font-medium text-n-ruby-11"
+                >
+                  <Icon icon="i-lucide-route" class="flex-shrink-0 size-3" />
+                  <span class="truncate">
+                    {{ t('CHAT_LIST.TICKET_BOARD.ESCALATION.NEEDS_ROUTING') }}
+                  </span>
+                </span>
+                <Button
+                  v-if="!ticketIsEscalated(ticket)"
+                  size="xs"
+                  color="amber"
+                  variant="faded"
+                  icon="i-lucide-send"
+                  :label="t('CHAT_LIST.TICKET_BOARD.ESCALATION.ESCALATE')"
+                  @click.stop="onEscalationChange(ticket, true)"
+                />
+                <Button
+                  v-else
+                  size="xs"
+                  color="slate"
+                  variant="faded"
+                  icon="i-lucide-shield-check"
+                  :label="
+                    t('CHAT_LIST.TICKET_BOARD.ESCALATION.MARK_NOT_ESCALATED')
+                  "
+                  @click.stop="onEscalationChange(ticket, false)"
+                />
+              </div>
             </td>
             <td class="px-2 py-3 align-top border-b border-n-weak" @click.stop>
               <select
