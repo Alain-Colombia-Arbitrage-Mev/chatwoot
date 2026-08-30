@@ -1286,6 +1286,51 @@ RSpec.describe 'Conversations API', type: :request do
         expect(response).to have_http_status(:success)
         expect(conversation.reload.custom_attributes).to eq({ 'user_id' => 1001 })
       end
+
+      it 'notifies responsible agents when support ticket is escalated' do
+        notification_service = instance_double(Conversations::SupportEscalationNotificationService, perform: true)
+        allow(Conversations::SupportEscalationNotificationService).to receive(:new).and_return(notification_service)
+
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/custom_attributes",
+             headers: agent.create_new_auth_token,
+             params: {
+               custom_attributes: { support_escalated: true, support_escalation_state: 'escalated' },
+               merge: true
+             },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(Conversations::SupportEscalationNotificationService)
+          .to have_received(:new).with(conversation: conversation)
+        expect(notification_service).to have_received(:perform)
+      end
+
+      it 'does not notify responsible agents when support ticket is already escalated' do
+        conversation.update!(custom_attributes: { support_escalated: true, support_escalation_state: 'escalated' })
+
+        expect(Conversations::SupportEscalationNotificationService).not_to receive(:new)
+
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/custom_attributes",
+             headers: agent.create_new_auth_token,
+             params: { custom_attributes: { support_escalation_updated_at: Time.current.iso8601 }, merge: true },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+      end
+
+      it 'does not notify responsible agents when support ticket is marked as not escalated' do
+        expect(Conversations::SupportEscalationNotificationService).not_to receive(:new)
+
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/custom_attributes",
+             headers: agent.create_new_auth_token,
+             params: {
+               custom_attributes: { support_escalated: false, support_escalation_state: 'not_escalated' },
+               merge: true
+             },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+      end
     end
 
     context 'when it is a bot' do

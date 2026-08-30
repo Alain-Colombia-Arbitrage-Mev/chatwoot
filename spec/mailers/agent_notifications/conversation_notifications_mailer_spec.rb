@@ -43,6 +43,24 @@ RSpec.describe AgentNotifications::ConversationNotificationsMailer do
     end
   end
 
+  describe 'conversation_escalation' do
+    let(:mail) { described_class.with(account: account).conversation_escalation(conversation, agent).deliver_now }
+
+    it 'renders the subject' do
+      expect(mail.subject).to eq(
+        "#{agent.available_name}, Conversation [ID - #{conversation.display_id}] has been escalated."
+      )
+    end
+
+    it 'renders the receiver email' do
+      expect(mail.to).to eq([agent.email])
+    end
+
+    it 'renders the conversation link' do
+      expect(mail.body.encoded).to include("/app/accounts/#{account.id}/conversations/#{conversation.display_id}")
+    end
+  end
+
   describe 'conversation_mention' do
     let(:contact) { create(:contact, name: nil, account: account) }
     let(:another_agent) { create(:user, email: 'agent2@example.com', account: account) }
