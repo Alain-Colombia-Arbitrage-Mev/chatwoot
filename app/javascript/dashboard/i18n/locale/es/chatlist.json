@@ -14,6 +14,64 @@
     "SEARCH": {
       "INPUT": "Búsqueda de Personas, Chats, Respuestas Salvadas .."
     },
+    "TICKET_BOARD": {
+      "TITLE": "Tickets de soporte",
+      "CRM_TITLE": "CRM de soporte",
+      "SUBTITLE": "Controla casos pendientes, resueltos y escalados desde una sola vista.",
+      "TOGGLE_TOOLTIP": "Abrir tablero de tickets",
+      "SHOW_ALL": "Ver todos",
+      "ALL_MODE": "Vista todos",
+      "FILTER_ARIA": "Filtros de casos de soporte",
+      "SEARCH_PLACEHOLDER": "Buscar por cliente, asunto, etiqueta o responsable",
+      "EMPTY": "No hay tickets que coincidan con esta vista.",
+      "OPEN": "Abrir",
+      "UNASSIGNED": "Sin responsable",
+      "NO_TEAM": "Sin equipo",
+      "LOAD_ROUTING_FAILED": "No se pudo cargar agentes, equipos o bandejas.",
+      "ASSIGN_AGENT_SUCCESS": "Ticket #{ticketId} asignado a {agentName}",
+      "ASSIGN_AGENT_FAILED": "No se pudo asignar el responsable.",
+      "ASSIGN_TEAM_SUCCESS": "Ticket #{ticketId} enviado a {teamName}",
+      "ASSIGN_TEAM_FAILED": "No se pudo asignar el equipo.",
+      "PRIORITY_SUCCESS": "Prioridad actualizada en ticket #{ticketId}",
+      "ESCALATION": {
+        "ESCALATED": "Escalado",
+        "NOT_ESCALATED": "No escalado",
+        "ESCALATE": "Escalar",
+        "MARK_NOT_ESCALATED": "No escalar",
+        "NEEDS_ROUTING": "Falta responsable/equipo",
+        "SUCCESS": "Ticket #{ticketId} escalado",
+        "CLEARED": "Ticket #{ticketId} marcado como no escalado",
+        "FAILED": "No se pudo actualizar el escalamiento."
+      },
+      "FILTERS": {
+        "ACTIVE": "Activos",
+        "PENDING": "Pendientes",
+        "RESOLVED": "Resueltos",
+        "ESCALATED": "Escalados",
+        "UNASSIGNED": "Sin responsable",
+        "ALL": "Todos"
+      },
+      "SUMMARY": {
+        "ALL": "Total",
+        "ACTIVE": "Activos",
+        "OPEN": "Abiertos",
+        "PENDING": "Pendientes",
+        "RESOLVED": "Resueltos",
+        "ESCALATED": "Escalados",
+        "UNASSIGNED": "Sin resp.",
+        "URGENT": "Urgentes",
+        "ROUTED": "Enrutados"
+      },
+      "COLUMNS": {
+        "TICKET": "Ticket",
+        "STATUS": "Estado",
+        "PRIORITY": "Prioridad",
+        "ESCALATION": "Escalamiento",
+        "RESPONSIBLE": "Responsable",
+        "TEAM": "Equipo",
+        "UPDATED": "Actualizado"
+      }
+    },
     "FILTER_ALL": "Todos",
     "ASSIGNEE_TYPE_TABS": {
       "me": "Mías",

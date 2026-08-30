@@ -13,7 +13,14 @@ const tickets = new TicketManager(config);
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/healthz') {
-      return json(res, 200, { status: 'ok', memory: config.memory.enabled ? 'enabled' : 'disabled' });
+      return json(res, 200, {
+        status: 'ok',
+        memory: config.memory.enabled ? 'enabled' : 'disabled',
+        support: {
+          provider: config.support.provider,
+          model: config.support.provider === 'openrouter' ? config.support.openRouter.model : 'mindbliss'
+        }
+      });
     }
     if (req.method === 'GET' && req.url.startsWith('/readyz')) {
       const url = new URL(req.url, 'http://127.0.0.1');

@@ -262,6 +262,7 @@ const actions = {
         await ConversationApi.updateCustomAttributes({
           conversationId,
           customAttributes,
+          merge: true,
         });
         commit(types.UPDATE_CONVERSATION_CUSTOM_ATTRIBUTES, {
           conversationId,
@@ -489,6 +490,7 @@ const actions = {
       const response = await ConversationApi.updateCustomAttributes({
         conversationId,
         customAttributes,
+        merge: true,
       });
       const { custom_attributes } = response.data;
       commit(types.UPDATE_CONVERSATION_CUSTOM_ATTRIBUTES, {

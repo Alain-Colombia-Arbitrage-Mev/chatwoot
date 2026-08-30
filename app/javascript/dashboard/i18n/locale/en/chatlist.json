@@ -14,6 +14,64 @@
     "SEARCH": {
       "INPUT": "Search for People, Chats, Saved Replies .."
     },
+    "TICKET_BOARD": {
+      "TITLE": "Support tickets",
+      "CRM_TITLE": "Support CRM",
+      "SUBTITLE": "Track pending, resolved and escalated cases from one view.",
+      "TOGGLE_TOOLTIP": "Open ticket board",
+      "SHOW_ALL": "View all",
+      "ALL_MODE": "All view",
+      "FILTER_ARIA": "Support case filters",
+      "SEARCH_PLACEHOLDER": "Search by customer, subject, label or owner",
+      "EMPTY": "No tickets match this view.",
+      "OPEN": "Open",
+      "UNASSIGNED": "Unassigned",
+      "NO_TEAM": "No team",
+      "LOAD_ROUTING_FAILED": "Could not load agents, teams or inboxes.",
+      "ASSIGN_AGENT_SUCCESS": "Ticket #{ticketId} assigned to {agentName}",
+      "ASSIGN_AGENT_FAILED": "Could not assign the owner.",
+      "ASSIGN_TEAM_SUCCESS": "Ticket #{ticketId} routed to {teamName}",
+      "ASSIGN_TEAM_FAILED": "Could not assign the team.",
+      "PRIORITY_SUCCESS": "Priority updated on ticket #{ticketId}",
+      "ESCALATION": {
+        "ESCALATED": "Escalated",
+        "NOT_ESCALATED": "Not escalated",
+        "ESCALATE": "Escalate",
+        "MARK_NOT_ESCALATED": "No escalation",
+        "NEEDS_ROUTING": "Needs owner/team",
+        "SUCCESS": "Ticket #{ticketId} escalated",
+        "CLEARED": "Ticket #{ticketId} marked as not escalated",
+        "FAILED": "Could not update escalation."
+      },
+      "FILTERS": {
+        "ACTIVE": "Active",
+        "PENDING": "Pending",
+        "RESOLVED": "Resolved",
+        "ESCALATED": "Escalated",
+        "UNASSIGNED": "Unassigned",
+        "ALL": "All"
+      },
+      "SUMMARY": {
+        "ALL": "Total",
+        "ACTIVE": "Active",
+        "OPEN": "Open",
+        "PENDING": "Pending",
+        "RESOLVED": "Resolved",
+        "ESCALATED": "Escalated",
+        "UNASSIGNED": "Unassigned",
+        "URGENT": "Urgent",
+        "ROUTED": "Routed"
+      },
+      "COLUMNS": {
+        "TICKET": "Ticket",
+        "STATUS": "Status",
+        "PRIORITY": "Priority",
+        "ESCALATION": "Escalation",
+        "RESPONSIBLE": "Owner",
+        "TEAM": "Team",
+        "UPDATED": "Updated"
+      }
+    },
     "FILTER_ALL": "All",
     "ASSIGNEE_TYPE_TABS": {
       "me": "Mine",

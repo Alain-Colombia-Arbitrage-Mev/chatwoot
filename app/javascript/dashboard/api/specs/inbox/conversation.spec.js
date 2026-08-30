@@ -193,6 +193,21 @@ describe('#ConversationAPI', () => {
       );
     });
 
+    it('#updateCustomAttributes with merge', () => {
+      conversationAPI.updateCustomAttributes({
+        conversationId: 45,
+        customAttributes: { support_escalated: true },
+        merge: true,
+      });
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        '/api/v1/conversations/45/custom_attributes',
+        {
+          custom_attributes: { support_escalated: true },
+        },
+        { params: { merge: true } }
+      );
+    });
+
     it('#filter', () => {
       const payload = {
         page: 1,

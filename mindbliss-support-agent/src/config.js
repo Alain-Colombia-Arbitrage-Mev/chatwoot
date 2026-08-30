@@ -1,7 +1,13 @@
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 'on', 'enabled']);
 const FALSE_VALUES = new Set(['0', 'false', 'no', 'n', 'off', 'disabled']);
+const SUPPORT_AI_PROVIDERS = new Set(['mindbliss', 'openrouter']);
 
 export function readConfig(env = process.env) {
+  const supportProvider = String(env.SUPPORT_AI_PROVIDER || 'mindbliss').trim().toLowerCase();
+  const sharedOpenRouterApiKey = env.OPENROUTER_API_KEY || '';
+  const openRouterChatApiKey = env.OPENROUTER_CHAT_API_KEY || sharedOpenRouterApiKey;
+  const openRouterMemoryApiKey = env.OPENROUTER_MEMORY_API_KEY || sharedOpenRouterApiKey || env.OPENROUTER_CHAT_API_KEY || '';
+
   const cfg = {
     env: env.NODE_ENV || 'development',
     port: intFrom(env.PORT, 9108),
@@ -20,9 +26,21 @@ export function readConfig(env = process.env) {
       forwardedProto: env.CHATWOOT_INTERNAL_FORWARDED_PROTO || 'https'
     },
     support: {
+      provider: supportProvider,
       url: stripTrailingSlash(env.VP_SUPPORT_AI_URL || ''),
       token: env.VP_SUPPORT_AI_TOKEN || '',
-      timeoutMs: intFrom(env.VP_SUPPORT_AI_TIMEOUT_MS, 45000)
+      timeoutMs: intFrom(env.VP_SUPPORT_AI_TIMEOUT_MS, 45000),
+      openRouter: {
+        apiKey: openRouterChatApiKey,
+        chatUrl: stripTrailingSlash(env.OPENROUTER_CHAT_URL || 'https://openrouter.ai/api/v1/chat/completions'),
+        model: env.OPENROUTER_CHAT_MODEL || 'upstage/solar-pro4',
+        referer: env.OPENROUTER_HTTP_REFERER || env.CHATWOOT_PUBLIC_URL || '',
+        appTitle: env.OPENROUTER_APP_TITLE || 'Mindbliss Chatwoot Support Agent',
+        timeoutMs: intFrom(env.OPENROUTER_CHAT_TIMEOUT_MS, 90000),
+        maxTokens: intFrom(env.OPENROUTER_CHAT_MAX_TOKENS, 700),
+        temperature: numberFrom(env.OPENROUTER_CHAT_TEMPERATURE, 0.2, { min: 0, max: 2 }),
+        maxAnswerChars: intFrom(env.OPENROUTER_CHAT_MAX_ANSWER_CHARS, 1800)
+      }
     },
     import: {
       token: env.MEMORY_IMPORT_TOKEN || '',
@@ -53,7 +71,7 @@ export function readConfig(env = process.env) {
       qdrantUrl: stripTrailingSlash(env.QDRANT_URL || ''),
       qdrantApiKey: env.QDRANT_API_KEY || '',
       collection: env.QDRANT_MEMORY_COLLECTION || 'chatwoot_memory',
-      openRouterApiKey: env.OPENROUTER_API_KEY || '',
+      openRouterApiKey: openRouterMemoryApiKey,
       embeddingUrl: env.OPENROUTER_EMBEDDING_URL || 'https://openrouter.ai/api/v1/embeddings',
       embeddingModel: env.OPENROUTER_EMBEDDING_MODEL || 'intfloat/multilingual-e5-large',
       embeddingDims: intFrom(env.OPENROUTER_EMBEDDING_DIMS, 1024),
@@ -70,13 +88,23 @@ export function readConfig(env = process.env) {
   };
 
   const missing = [];
+  if (!SUPPORT_AI_PROVIDERS.has(cfg.support.provider)) {
+    throw new Error(`Unsupported SUPPORT_AI_PROVIDER: ${cfg.support.provider}`);
+  }
   if (!secretPresent(cfg.webhookSecret)) missing.push('CHATWOOT_WEBHOOK_SECRET');
   if (!cfg.chatwoot.baseUrl) missing.push('CHATWOOT_BASE_URL');
   if (!secretPresent(cfg.chatwoot.apiAccessToken)) missing.push('CHATWOOT_API_ACCESS_TOKEN');
-  if (!cfg.support.url) missing.push('VP_SUPPORT_AI_URL');
-  if (!secretPresent(cfg.support.token)) missing.push('VP_SUPPORT_AI_TOKEN');
+  if (cfg.support.provider === 'mindbliss') {
+    if (!cfg.support.url) missing.push('VP_SUPPORT_AI_URL');
+    if (!secretPresent(cfg.support.token)) missing.push('VP_SUPPORT_AI_TOKEN');
+  }
+  if (cfg.support.provider === 'openrouter') {
+    if (!secretPresent(cfg.support.openRouter.apiKey)) missing.push('OPENROUTER_CHAT_API_KEY or OPENROUTER_API_KEY');
+    if (!cfg.support.openRouter.chatUrl) missing.push('OPENROUTER_CHAT_URL');
+    if (!cfg.support.openRouter.model) missing.push('OPENROUTER_CHAT_MODEL');
+  }
   if (cfg.memory.enabled) {
-    if (!secretPresent(cfg.memory.openRouterApiKey)) missing.push('OPENROUTER_API_KEY');
+    if (!secretPresent(cfg.memory.openRouterApiKey)) missing.push('OPENROUTER_MEMORY_API_KEY or OPENROUTER_API_KEY');
     if (!cfg.memory.qdrantUrl) missing.push('QDRANT_URL');
     if (cfg.memory.falkorEnabled && !urlConfigured(cfg.memory.falkorUrl)) missing.push('FALKORDB_URL');
   }
@@ -93,6 +121,12 @@ function stripTrailingSlash(value) {
 function intFrom(value, fallback) {
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function numberFrom(value, fallback, { min = Number.NEGATIVE_INFINITY, max = Number.POSITIVE_INFINITY } = {}) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number.parseFloat(value);
+  return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
 }
 
 function boolFrom(value, fallback) {

@@ -1,0 +1,165 @@
+name: Mindbliss Chatwoot Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch to deploy
+        required: false
+        default: develop
+      build_swap_mb:
+        description: Temporary swap size in MB for the EC2 build
+        required: false
+        default: '3072'
+      health_url:
+        description: Deployment base URL or /api URL to verify
+        required: false
+        default: https://soporte.mindblisspower.com/api
+  push:
+    branches:
+      - develop
+    paths:
+      - 'app/javascript/dashboard/**'
+      - 'deployment/mindbliss_chatwoot_upgrade.sh'
+      - 'deployment/mindbliss_support_agent_setup.rb'
+      - 'docker/mindbliss-chatwoot.Dockerfile'
+      - 'docker-compose.support-crm.override.yaml'
+      - 'VERSION_CW'
+      - '.github/workflows/mindbliss-chatwoot-deploy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mindbliss-chatwoot-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Chatwoot to EC2
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DEFAULT_HEALTH_URL: ${{ vars.MINDBLISS_DEPLOY_HEALTH_URL }}
+      EC2_HOST: ${{ secrets.MINDBLISS_EC2_HOST }}
+      EC2_SSH_KEY: ${{ secrets.MINDBLISS_EC2_SSH_KEY }}
+      EC2_USER: ${{ secrets.MINDBLISS_EC2_USER }}
+      GITHUB_REF_NAME: ${{ github.ref_name }}
+      INPUT_BUILD_SWAP_MB: ${{ github.event.inputs.build_swap_mb }}
+      INPUT_HEALTH_URL: ${{ github.event.inputs.health_url }}
+      INPUT_REF: ${{ github.event.inputs.ref }}
+    steps:
+      - name: Resolve deploy settings
+        id: settings
+        run: |
+          set -euo pipefail
+
+          deploy_ref="${INPUT_REF:-$GITHUB_REF_NAME}"
+          build_swap_mb="${INPUT_BUILD_SWAP_MB:-3072}"
+          health_url="${INPUT_HEALTH_URL:-${DEFAULT_HEALTH_URL:-https://soporte.mindblisspower.com/api}}"
+
+          if [[ ! "$deploy_ref" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "::error::Invalid deploy ref: $deploy_ref"
+            exit 1
+          fi
+
+          if [[ ! "$build_swap_mb" =~ ^[0-9]+$ ]]; then
+            echo "::error::build_swap_mb must be a non-negative integer"
+            exit 1
+          fi
+
+          health_url="${health_url%/}"
+          if [[ "$health_url" != */api ]]; then
+            health_url="${health_url}/api"
+          fi
+
+          echo "deploy_ref=$deploy_ref" >> "$GITHUB_OUTPUT"
+          echo "build_swap_mb=$build_swap_mb" >> "$GITHUB_OUTPUT"
+          {
+            echo 'health_url<<EOF'
+            echo "$health_url"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+
+          missing=0
+          declare -A required_secrets=(
+            [EC2_HOST]=MINDBLISS_EC2_HOST
+            [EC2_USER]=MINDBLISS_EC2_USER
+            [EC2_SSH_KEY]=MINDBLISS_EC2_SSH_KEY
+          )
+
+          for secret_name in "${!required_secrets[@]}"; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "::error::Missing required secret ${required_secrets[$secret_name]}"
+              missing=1
+            fi
+          done
+
+          exit "$missing"
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/mindbliss_ec2
+          chmod 600 ~/.ssh/mindbliss_ec2
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy on EC2
+        env:
+          BUILD_SWAP_MB: ${{ steps.settings.outputs.build_swap_mb }}
+          DEPLOY_REF: ${{ steps.settings.outputs.deploy_ref }}
+        run: |
+          set -euo pipefail
+
+          ssh -i ~/.ssh/mindbliss_ec2 "$EC2_USER@$EC2_HOST" "sudo env DEPLOY_REF='$DEPLOY_REF' BUILD_SWAP_MB='$BUILD_SWAP_MB' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          cd /opt/chatwoot/builds/chatwoot-mindbliss
+          git fetch origin "$DEPLOY_REF"
+
+          if git show-ref --verify --quiet "refs/heads/$DEPLOY_REF"; then
+            git checkout "$DEPLOY_REF"
+          else
+            git checkout -B "$DEPLOY_REF" "origin/$DEPLOY_REF"
+          fi
+
+          git pull --ff-only origin "$DEPLOY_REF"
+
+          MINDBLISS_BUILD_SWAP_MB="$BUILD_SWAP_MB" \
+            MINDBLISS_BUILD_SWAP_FILE=/opt/chatwoot/builds/mindbliss-chatwoot-build.swap \
+            ./deployment/mindbliss_chatwoot_upgrade.sh
+          REMOTE
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Verify deployment
+        env:
+          HEALTH_URL: ${{ steps.settings.outputs.health_url }}
+        run: |
+          set -euo pipefail
+
+          body_file="$(mktemp)"
+          for attempt in {1..20}; do
+            echo "Checking deployment health, attempt ${attempt}/20..."
+
+            if curl -fsS "$HEALTH_URL" -o "$body_file" && jq -e '.version and .timestamp and .queue_services == "ok" and .data_services == "ok"' "$body_file" > /dev/null; then
+              echo "Deployment verified"
+              cat "$body_file"
+              exit 0
+            fi
+
+            cat "$body_file" || true
+            sleep 15
+          done
+
+          echo "Deployment did not become healthy"
+          exit 1

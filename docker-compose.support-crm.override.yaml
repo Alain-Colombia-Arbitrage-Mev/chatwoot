@@ -1,0 +1,5 @@
+services:
+  rails:
+    image: ${MINDBLISS_CHATWOOT_IMAGE:-chatwoot-support-crm:v4.17.1-local}
+  sidekiq:
+    image: ${MINDBLISS_CHATWOOT_IMAGE:-chatwoot-support-crm:v4.17.1-local}

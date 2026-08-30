@@ -403,6 +403,38 @@ describe('#actions', () => {
         ],
       ]);
     });
+
+    it('merges custom attributes before changing status', async () => {
+      axios.post.mockClear();
+      axios.post
+        .mockResolvedValueOnce({
+          data: { custom_attributes: { support_escalated: true } },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            payload: {
+              conversation_id: 1,
+              current_status: 'open',
+              snoozed_until: null,
+            },
+          },
+        });
+
+      await actions.toggleStatus(
+        { commit },
+        {
+          conversationId: 1,
+          status: 'open',
+          customAttributes: { support_escalated: true },
+        }
+      );
+
+      expect(axios.post).toHaveBeenCalledWith(
+        '/api/v1/conversations/1/custom_attributes',
+        { custom_attributes: { support_escalated: true } },
+        { params: { merge: true } }
+      );
+    });
   });
 
   describe('#assignTeam', () => {
@@ -562,6 +594,7 @@ describe('#deleteMessage', () => {
 
   describe('#updateCustomAttributes', () => {
     it('update conversation custom attributes', async () => {
+      axios.post.mockClear();
       axios.post.mockResolvedValue({
         data: { custom_attributes: { order_d: '1001' } },
       });
@@ -581,6 +614,11 @@ describe('#deleteMessage', () => {
           },
         ],
       ]);
+      expect(axios.post).toHaveBeenCalledWith(
+        '/api/v1/conversations/1/custom_attributes',
+        { custom_attributes: { order_d: '1001' } },
+        { params: { merge: true } }
+      );
     });
   });
 });

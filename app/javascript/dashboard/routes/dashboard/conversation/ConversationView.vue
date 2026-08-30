@@ -52,6 +52,10 @@ export default {
       type: [String, Number],
       default: 0,
     },
+    isTicketBoardRoute: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup() {
     const { uiSettings, updateUISettings } = useUISettings();
@@ -74,9 +78,17 @@ export default {
       currentChat: 'getSelectedChat',
     }),
     showConversationList() {
+      if (this.isTicketBoardRoute) {
+        return true;
+      }
+
       return this.isOnExpandedLayout ? !this.conversationId : true;
     },
     showMessageView() {
+      if (this.isTicketBoardRoute) {
+        return false;
+      }
+
       return this.conversationId ? true : !this.isOnExpandedLayout;
     },
     isOnExpandedLayout() {
@@ -204,6 +216,7 @@ export default {
       :conversation-type="conversationType"
       :folders-id="foldersId"
       :is-on-expanded-layout="isOnExpandedLayout"
+      :is-ticket-board-route="isTicketBoardRoute"
       @conversation-load="onConversationLoad"
     />
     <ConversationBox
