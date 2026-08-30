@@ -8,11 +8,11 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def create
     builder = AgentBuilder.new(
-      email: new_agent_params['email'],
-      name: new_agent_params['name'],
-      role: new_agent_params['role'],
-      availability: new_agent_params['availability'],
-      auto_offline: new_agent_params['auto_offline'],
+      email: support_agent_params['email'],
+      name: support_agent_params['name'],
+      role: :agent,
+      availability: support_agent_params['availability'],
+      auto_offline: support_agent_params['auto_offline'],
       inviter: current_user,
       account: Current.account
     )
@@ -67,8 +67,8 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
     params.require(:agent).permit(allowed_agent_params)
   end
 
-  def new_agent_params
-    params.require(:agent).permit(:email, :name, :role, :availability, :auto_offline)
+  def support_agent_params
+    params.require(:agent).permit(:email, :name, :availability, :auto_offline)
   end
 
   def agents

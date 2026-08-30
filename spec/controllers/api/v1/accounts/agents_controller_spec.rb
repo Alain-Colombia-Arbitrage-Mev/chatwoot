@@ -178,6 +178,20 @@ RSpec.describe 'Agents API', type: :request do
         expect(account.users.last.name).to eq('NewUser')
       end
 
+      it 'creates a support agent when an administrator role is submitted' do
+        post "/api/v1/accounts/#{account.id}/agents",
+             params: params.merge(role: :administrator),
+             headers: admin.create_new_auth_token,
+             as: :json
+
+        created_agent = User.from_email(params[:email])
+        account_user = created_agent.account_users.find_by(account: account)
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['role']).to eq('agent')
+        expect(account_user.role).to eq('agent')
+      end
+
       context 'when the account email limit is exhausted' do
         before do
           allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(true)

@@ -7,6 +7,37 @@ RSpec.describe 'Agents API', type: :request do
   let!(:admin) { create(:user, custom_attributes: { test: 'test' }, account: account, role: :administrator) }
 
   describe 'POST /api/v1/accounts/{account.id}/agents' do
+    context 'when elevated role attributes are submitted' do
+      let(:custom_role) { create(:custom_role, account: account) }
+      let(:params) do
+        {
+          name: 'NewUser',
+          email: Faker::Internet.email,
+          role: :administrator,
+          custom_role_id: custom_role.id
+        }
+      end
+
+      before do
+        account.enable_features!('custom_roles')
+      end
+
+      it 'creates a support agent without a custom role' do
+        post "/api/v1/accounts/#{account.id}/agents",
+             params: params,
+             headers: admin.create_new_auth_token,
+             as: :json
+
+        created_agent = User.from_email(params[:email])
+        account_user = created_agent.account_users.find_by(account: account)
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['role']).to eq('agent')
+        expect(account_user.role).to eq('agent')
+        expect(account_user.custom_role_id).to be_nil
+      end
+    end
+
     context 'when the account has reached its agent limit' do
       params = { name: 'NewUser', email: Faker::Internet.email, role: :agent }
 
