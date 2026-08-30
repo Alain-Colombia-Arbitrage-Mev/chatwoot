@@ -67,6 +67,7 @@ const props = defineProps({
   foldersId: { type: [String, Number], default: 0 },
   showConversationList: { default: true, type: Boolean },
   isOnExpandedLayout: { default: false, type: Boolean },
+  isTicketBoardRoute: { default: false, type: Boolean },
 });
 
 const emit = defineEmits(['conversationLoad']);
@@ -82,7 +83,6 @@ const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
 const showAdvancedFilters = ref(false);
-const showTicketBoard = ref(false);
 // chatsOnView is to store the chats that are currently visible on the screen,
 // which mirrors the conversationList.
 const chatsOnView = ref([]);
@@ -403,6 +403,8 @@ const isTicketBoardAllMode = computed(
     activeStatus.value === wootConstants.STATUS_TYPE.ALL
 );
 
+const showTicketBoard = computed(() => props.isTicketBoardRoute);
+
 // ---------------------- Methods -----------------------
 function setFiltersFromUISettings() {
   const { conversations_filter_by: filterBy = {} } = uiSettings.value;
@@ -664,12 +666,9 @@ async function activateAllTicketsMode() {
   resetAndFetchData();
 }
 
-function toggleTicketBoard() {
-  showTicketBoard.value = !showTicketBoard.value;
-  if (showTicketBoard.value) {
-    ensureTicketRoutingData();
-    activateAllTicketsMode();
-  }
+function activateTicketBoardRoute() {
+  ensureTicketRoutingData();
+  activateAllTicketsMode();
 }
 
 function showAllTickets() {
@@ -1044,6 +1043,12 @@ useEmitter('fetch_conversation_stats', () => {
 onMounted(() => {
   store.dispatch('setChatListFilters', conversationFilters.value);
   setFiltersFromUISettings();
+
+  if (props.isTicketBoardRoute) {
+    activateTicketBoardRoute();
+    return;
+  }
+
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();
@@ -1100,6 +1105,21 @@ watch(
   () => resetAndFetchData()
 );
 
+watch(
+  computed(() => props.isTicketBoardRoute),
+  isTicketBoardRoute => {
+    if (isTicketBoardRoute) {
+      activateTicketBoardRoute();
+      return;
+    }
+
+    setFiltersFromUISettings();
+    store.dispatch('setChatStatusFilter', activeStatus.value);
+    store.dispatch('setChatSortFilter', activeSortBy.value);
+    resetAndFetchData();
+  }
+);
+
 watch(activeFolder, (newVal, oldVal) => {
   if (newVal !== oldVal) {
     store.dispatch('customViews/setActiveConversationFolder', newVal || null);
@@ -1123,15 +1143,14 @@ watch(conversationFilters, (newVal, oldVal) => {
     class="flex flex-col flex-shrink-0 conversations-list-wrap bg-n-surface-1 relative"
     :class="[
       { hidden: !showConversationList },
-      isOnExpandedLayout
+      isOnExpandedLayout || showTicketBoard
         ? 'basis-full'
-        : showTicketBoard
-          ? 'w-full sm:w-[420px] xl:w-[520px] 2xl:w-[640px]'
-          : 'w-[340px] 2xl:w-[412px]',
+        : 'w-[340px] 2xl:w-[412px]',
     ]"
   >
     <slot />
     <ChatListHeader
+      v-if="!showTicketBoard"
       :page-title="pageTitle"
       :has-applied-filters="hasAppliedFilters"
       :has-active-folders="hasActiveFolders"
@@ -1139,13 +1158,11 @@ watch(conversationFilters, (newVal, oldVal) => {
       :is-on-expanded-layout="isOnExpandedLayout"
       :conversation-stats="conversationStats"
       :is-list-loading="chatListLoading && !conversationList.length"
-      :is-ticket-board-visible="showTicketBoard"
       @add-folders="onClickOpenAddFoldersModal"
       @delete-folders="onClickOpenDeleteFoldersModal"
       @filters-modal="onToggleAdvanceFiltersModal"
       @reset-filters="resetAndFetchData"
       @basic-filter-change="onBasicFilterChange"
-      @toggle-ticket-board="toggleTicketBoard"
     />
 
     <TeleportWithDirection
@@ -1170,7 +1187,7 @@ watch(conversationFilters, (newVal, oldVal) => {
     />
 
     <ChatTypeTabs
-      v-if="!hasAppliedFiltersOrActiveFolders"
+      v-if="!showTicketBoard && !hasAppliedFiltersOrActiveFolders"
       :items="assigneeTabItems"
       :active-tab="activeAssigneeTab"
       is-compact

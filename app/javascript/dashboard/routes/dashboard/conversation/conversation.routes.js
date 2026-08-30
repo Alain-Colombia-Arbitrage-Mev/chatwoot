@@ -56,6 +56,17 @@ export default {
       },
     },
     {
+      path: frontendURL('accounts/:accountId/support/tickets'),
+      name: 'support_tickets',
+      meta: {
+        permissions: CONVERSATION_PERMISSIONS,
+      },
+      component: ConversationView,
+      props: () => {
+        return { inboxId: 0, isTicketBoardRoute: true };
+      },
+    },
+    {
       path: frontendURL('accounts/:accountId/conversations/:conversation_id'),
       name: 'inbox_conversation',
       meta: {

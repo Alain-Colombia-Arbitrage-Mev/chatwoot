@@ -16,7 +16,6 @@ const props = defineProps({
   isOnExpandedLayout: { type: Boolean, required: true },
   conversationStats: { type: Object, required: true },
   isListLoading: { type: Boolean, required: true },
-  isTicketBoardVisible: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -25,7 +24,6 @@ const emit = defineEmits([
   'resetFilters',
   'basicFilterChange',
   'filtersModal',
-  'toggleTicketBoard',
 ]);
 
 const { uiSettings, updateUISettings } = useUISettings();
@@ -88,15 +86,6 @@ const toggleConversationLayout = () => {
       </span>
     </div>
     <div class="flex items-center gap-1">
-      <NextButton
-        id="toggleTicketBoardButton"
-        v-tooltip.top-end="$t('CHAT_LIST.TICKET_BOARD.TOGGLE_TOOLTIP')"
-        icon="i-lucide-ticket-check"
-        :color="isTicketBoardVisible ? 'amber' : 'slate'"
-        :variant="isTicketBoardVisible ? 'solid' : 'faded'"
-        xs
-        @click="emit('toggleTicketBoard')"
-      />
       <template v-if="hasAppliedFilters && !hasActiveFolders">
         <div class="relative">
           <NextButton
