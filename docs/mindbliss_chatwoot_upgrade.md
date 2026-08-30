@@ -104,23 +104,18 @@ The `Mindbliss Chatwoot Deploy` workflow can run the same production deploy from
 GitHub Actions. It deploys manually via `workflow_dispatch`, and also on pushes
 to `develop` when Chatwoot frontend, Docker overlay or deployment files change.
 
-Configure these repository secrets before using it:
+The deploy job runs on a repository-scoped self-hosted runner installed on the
+EC2. The runner must be online and labeled `mindbliss-chatwoot`; it executes the
+deployment locally on the instance, so GitHub-hosted runners do not need SSH
+access to port 22.
 
-```text
-MINDBLISS_EC2_HOST=34.197.213.11
-MINDBLISS_EC2_USER=ubuntu
-MINDBLISS_EC2_SSH_KEY=<private SSH key with access to the EC2>
-```
-
-Optionally configure these repository variables:
+Optionally configure this repository variable:
 
 ```text
 MINDBLISS_DEPLOY_HEALTH_URL=https://soporte.mindblisspower.com/api
-MINDBLISS_EC2_KNOWN_HOSTS=34.197.213.11 ssh-ed25519 <host public key>
 ```
 
 The workflow fetches the selected branch in
 `/opt/chatwoot/builds/chatwoot-mindbliss`, runs
 `deployment/mindbliss_chatwoot_upgrade.sh` with temporary swap, then verifies
-the `/api` health response. If `MINDBLISS_EC2_KNOWN_HOSTS` is present, SSH host
-key checking is strict against that value.
+the `/api` health response.
