@@ -56,14 +56,25 @@ DEPLOY_DIR=/opt/chatwoot/source \
 deployment/mindbliss_chatwoot_upgrade.sh
 ```
 
+On small EC2 instances, Vite can be killed by the kernel during production asset
+builds. Run the script as root with temporary build swap enabled:
+
+```bash
+sudo env SOURCE_DIR=/opt/chatwoot/builds/chatwoot-mindbliss \
+  DEPLOY_DIR=/opt/chatwoot/source \
+  MINDBLISS_BUILD_SWAP_MB=4096 \
+  bash /opt/chatwoot/builds/chatwoot-mindbliss/deployment/mindbliss_chatwoot_upgrade.sh
+```
+
 The script:
 
 1. Refuses to build if the source worktree has uncommitted changes.
-2. Builds a production image from `docker/mindbliss-chatwoot.Dockerfile`.
-3. Tags it as `chatwoot-support-crm:v<VERSION_CW>-<git-sha>`.
-4. Writes `/opt/chatwoot/source/docker-compose.support-crm.override.yaml`.
-5. Runs `bundle exec rails db:chatwoot_prepare`.
-6. Restarts `rails` and `sidekiq`.
+2. Optionally creates temporary swap when `MINDBLISS_BUILD_SWAP_MB` is set.
+3. Builds a production image from `docker/mindbliss-chatwoot.Dockerfile`.
+4. Tags it as `chatwoot-support-crm:v<VERSION_CW>-<git-sha>`.
+5. Writes `/opt/chatwoot/source/docker-compose.support-crm.override.yaml`.
+6. Runs `bundle exec rails db:chatwoot_prepare`.
+7. Restarts `rails` and `sidekiq`.
 
 ## Verify
 
