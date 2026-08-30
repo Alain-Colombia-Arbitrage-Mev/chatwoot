@@ -11,6 +11,7 @@ class Captain::Assistant::AgentRunnerService
   attr_reader :last_run_result
 
   REPLY_SUGGESTION_SOURCE = 'copilot_reply_suggestion'.freeze
+  REPLY_SUGGESTION_FEATURE = 'reply_suggestion'.freeze
 
   def initialize(assistant:, conversation: nil, callbacks: {}, source: nil, responding_to_message_id: nil)
     @assistant = assistant
@@ -117,8 +118,22 @@ class Captain::Assistant::AgentRunnerService
     agent = @assistant.agent
     agent.clone(
       instructions: ->(context) { @assistant.agent_instructions(context, prompt_template: 'copilot_reply_suggestion') },
+      model: reply_suggestion_model,
+      provider: reply_suggestion_provider,
       tools: agent.tools.select { |tool| available_in_reply_suggestion?(tool) }
     )
+  end
+
+  def reply_suggestion_model
+    reply_suggestion_route[:model]
+  end
+
+  def reply_suggestion_provider
+    reply_suggestion_route[:provider]
+  end
+
+  def reply_suggestion_route
+    @reply_suggestion_route ||= Llm::FeatureRouter.resolve(feature: REPLY_SUGGESTION_FEATURE, account: @assistant.account)
   end
 
   def available_in_reply_suggestion?(tool)

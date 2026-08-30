@@ -16,14 +16,14 @@ class Captain::Tools::SearchReplyDocumentationService < RubyLLM::Tool
   end
 
   def execute(query:)
-    Rails.logger.info { "#{self.class.name}: #{query}" }
+    Rails.logger.info { "#{self.class.name}: query_length=#{query.to_s.length}" }
 
     translated_query = Captain::Llm::TranslateQueryService
                        .new(account: @account)
                        .translate(query, target_language: @account.locale_english_name)
 
     responses = search_responses(translated_query)
-    return 'No FAQs found for the given query' if responses.empty?
+    return no_verified_knowledge_message if responses.empty?
 
     responses.map { |response| format_response(response) }.join
   end
@@ -36,6 +36,14 @@ class Captain::Tools::SearchReplyDocumentationService < RubyLLM::Tool
     else
       @account.captain_assistant_responses.approved.search(query, account_id: @account.id)
     end
+  end
+
+  def no_verified_knowledge_message
+    [
+      'No verified documentation or FAQ memory was found for this query.',
+      'Do not answer from model memory.',
+      'Draft a bounded reply that says the available information is not enough to confirm the answer.'
+    ].join(' ')
   end
 
   def format_response(response)

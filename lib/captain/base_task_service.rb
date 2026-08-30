@@ -32,23 +32,24 @@ class Captain::BaseTaskService
   end
 
   def api_base
-    endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || 'https://api.openai.com/'
-    endpoint = endpoint.chomp('/')
-    "#{endpoint}/v1"
+    Llm::Config.api_base_for
   end
 
   def make_api_call(messages:, model: nil, feature: nil, schema: nil, tools: [])
     # Community edition prerequisite checks
     # Enterprise module handles these with more specific error messages (cloud vs self-hosted)
     return { error: I18n.t('captain.disabled'), error_code: 403 } unless captain_tasks_enabled?
-    return { error: I18n.t('captain.api_key_missing'), error_code: 401 } unless api_key_configured?
 
     model = resolved_model(model: model, feature: feature)
+    provider = Llm::Models.provider_for(model)
+    credential = llm_credential(provider: provider)
+    return { error: I18n.t('captain.api_key_missing'), error_code: 401 } if credential.blank?
+
     instrumentation_params = build_instrumentation_params(model, messages)
     instrumentation_method = tools.any? ? :instrument_tool_session : :instrument_llm_call
 
     response = send(instrumentation_method, instrumentation_params) do
-      execute_ruby_llm_request(model: model, messages: messages, schema: schema, tools: tools)
+      execute_ruby_llm_request(model: model, messages: messages, schema: schema, tools: tools, credential: credential.merge(provider: provider))
     end
 
     return response unless build_follow_up_context? && response[:message].present?
@@ -65,10 +66,8 @@ class Captain::BaseTaskService
     route[:model]
   end
 
-  def execute_ruby_llm_request(model:, messages:, schema: nil, tools: [])
-    credential = llm_credential
-
-    Llm::Config.with_api_key(credential[:api_key], api_base: api_base) do |context|
+  def execute_ruby_llm_request(model:, messages:, credential:, schema: nil, tools: [])
+    Llm::Config.with_api_key(credential[:api_key], api_base: api_base, provider: credential[:provider]) do |context|
       chat = build_chat(context, model: model, messages: messages, schema: schema, tools: tools)
 
       conversation_messages = messages.reject { |m| m[:role] == 'system' }
@@ -168,20 +167,20 @@ class Captain::BaseTaskService
     llm_credential&.dig(:source) != :hook
   end
 
-  def api_key_configured?
-    llm_credential.present?
-  end
+  def api_key_configured?(provider: nil) = llm_credential(provider: provider).present?
 
   def api_key
     llm_credential&.dig(:api_key)
   end
 
-  def llm_credential
-    @llm_credential ||= if use_account_openai_hook?
-                          hook_llm_credential || system_llm_credential
-                        else
-                          system_llm_credential
-                        end
+  def llm_credential(provider: nil)
+    if provider.to_s == Llm::Config::OPENROUTER_PROVIDER
+      openrouter_llm_credential
+    elsif use_account_openai_hook?
+      hook_llm_credential || system_llm_credential
+    else
+      system_llm_credential
+    end
   end
 
   def use_account_openai_hook?
@@ -197,12 +196,17 @@ class Captain::BaseTaskService
     { api_key: system_api_key, source: :system } if system_api_key.present?
   end
 
+  def openrouter_llm_credential
+    key = Llm::Config.provider_api_key(Llm::Config::OPENROUTER_PROVIDER)
+    { api_key: key, source: :system } if key.present?
+  end
+
   def openai_hook
     @openai_hook ||= account.hooks.find_by(app_id: 'openai', status: 'enabled')
   end
 
   def system_api_key
-    @system_api_key ||= InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_API_KEY')&.value
+    @system_api_key ||= Llm::Config.system_api_key
   end
 
   def exception_tracking_account

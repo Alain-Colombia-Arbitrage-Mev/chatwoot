@@ -5,8 +5,14 @@ providers:
     display_name: 'Anthropic'
   gemini:
     display_name: 'Gemini'
+  openrouter:
+    display_name: 'OpenRouter'
 
 models:
+  upstage/solar-pro4:
+    provider: openrouter
+    display_name: 'Upstage Solar Pro 4'
+    credit_multiplier: 1
   gpt-4.1:
     provider: openai
     display_name: 'GPT-4.1'
@@ -77,8 +83,20 @@ features:
         gpt-4.1,
         gpt-5.1,
         gpt-5.2,
-      ]
+    ]
     default: gpt-4.1
+    internal: true
+  reply_suggestion:
+    models:
+      [
+        upstage/solar-pro4,
+        gpt-4.1-mini,
+        gpt-5-mini,
+        gpt-4.1,
+        gpt-5.1,
+        gpt-5.2,
+      ]
+    default: upstage/solar-pro4
     internal: true
   editor:
     models:
@@ -97,6 +115,7 @@ features:
   assistant:
     models:
       [
+        upstage/solar-pro4,
         gpt-4.1-mini,
         gpt-5-mini,
         gpt-4.1,
@@ -107,10 +126,11 @@ features:
         gemini-3-flash,
         gemini-3-pro,
       ]
-    default: gpt-4.1
+    default: upstage/solar-pro4
   copilot:
     models:
       [
+        upstage/solar-pro4,
         gpt-4.1-mini,
         gpt-5-mini,
         gpt-4.1,
@@ -121,7 +141,7 @@ features:
         gemini-3-flash,
         gemini-3-pro,
       ]
-    default: gpt-4.1
+    default: upstage/solar-pro4
   label_suggestion:
     models:
       [gpt-4.1-nano, gpt-4.1-mini, gpt-5-mini, gemini-3-flash, claude-haiku-4.5]

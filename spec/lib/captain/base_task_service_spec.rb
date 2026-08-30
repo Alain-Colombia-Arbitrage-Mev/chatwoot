@@ -21,7 +21,12 @@ RSpec.describe Captain::BaseTaskService do
   let(:service) { test_service_class.new(account: account, conversation_display_id: conversation.display_id) }
 
   before do
-    InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy_all
+    InstallationConfig.where(name: %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPENROUTER_API_KEY CAPTAIN_OPEN_AI_ENDPOINT]).destroy_all
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with('CAPTAIN_OPEN_AI_API_KEY').and_return(nil)
+    allow(ENV).to receive(:[]).with('CAPTAIN_OPEN_AI_ENDPOINT').and_return(nil)
+    allow(ENV).to receive(:[]).with('CAPTAIN_OPENROUTER_API_KEY').and_return(nil)
+    allow(ENV).to receive(:[]).with('OPENROUTER_API_KEY').and_return(nil)
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
     # Stub captain enabled check to allow OSS specs to test base functionality
     # without enterprise module interference
@@ -191,6 +196,24 @@ RSpec.describe Captain::BaseTaskService do
       service.send(:make_api_call, feature: 'help_center_article_generation', messages: messages)
     end
 
+    it 'uses the OpenRouter key for OpenRouter models' do
+      create(:installation_config, name: 'CAPTAIN_OPENROUTER_API_KEY', value: 'openrouter-key')
+
+      expect(Llm::Config).to receive(:with_api_key)
+        .with('openrouter-key', api_base: anything, provider: 'openrouter')
+        .and_yield(mock_context)
+      expect(mock_context).to receive(:chat).with(model: 'upstage/solar-pro4').and_return(mock_chat)
+
+      service.send(:make_api_call, model: 'upstage/solar-pro4', messages: messages)
+    end
+
+    it 'requires an OpenRouter key for OpenRouter models' do
+      result = service.send(:make_api_call, model: 'upstage/solar-pro4', messages: messages)
+
+      expect(result[:error]).to eq(I18n.t('captain.api_key_missing'))
+      expect(result[:error_code]).to eq(401)
+    end
+
     it 'prefers account overrides over supplied feature fallback models' do
       account.update!(captain_models: { 'help_center_article_generation' => 'gpt-4.1' })
 
@@ -295,7 +318,7 @@ RSpec.describe Captain::BaseTaskService do
     it 'tracks exceptions against the system key when an account hook exists' do
       create(:integrations_hook, :openai, account: account, settings: { 'api_key' => 'hook-key' })
 
-      expect(Llm::Config).to receive(:with_api_key).with('test-key', api_base: anything).and_raise(error)
+      expect(Llm::Config).to receive(:with_api_key).with('test-key', api_base: anything, provider: nil).and_raise(error)
       expect(ChatwootExceptionTracker).to receive(:new).with(error, account: account).and_return(exception_tracker)
       expect(exception_tracker).to receive(:capture_exception)
 
@@ -339,9 +362,8 @@ RSpec.describe Captain::BaseTaskService do
       end
     end
 
-    it 'uses account OpenAI hook for editor task services' do
+    it 'uses account OpenAI hook for non-OpenRouter editor task services' do
       create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'hook-key' })
-      user = create(:user, account: account)
       follow_up_context = {
         'event_name' => 'professional',
         'original_context' => 'Original text',
@@ -351,7 +373,6 @@ RSpec.describe Captain::BaseTaskService do
       editor_services = [
         Captain::RewriteService.new(account: account, content: 'Text', operation: 'improve', conversation_display_id: conversation.display_id),
         Captain::SummaryService.new(account: account, conversation_display_id: conversation.display_id),
-        Captain::ReplySuggestionService.new(account: account, conversation_display_id: conversation.display_id, user: user),
         Captain::LabelSuggestionService.new(account: account, conversation_display_id: conversation.display_id),
         Captain::FollowUpService.new(
           account: account,

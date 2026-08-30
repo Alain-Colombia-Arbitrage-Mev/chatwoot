@@ -3,7 +3,7 @@ class Captain::ReplySuggestionService < Captain::BaseTaskService
 
   def perform
     make_api_call(
-      feature: 'editor',
+      feature: 'reply_suggestion',
       messages: [
         { role: 'system', content: system_prompt },
         { role: 'user', content: formatted_conversation }

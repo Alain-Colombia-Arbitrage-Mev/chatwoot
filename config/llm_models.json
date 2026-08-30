@@ -55009,6 +55009,68 @@
     }
   },
   {
+    "id": "upstage/solar-pro4",
+    "name": "Upstage: Solar Pro 4",
+    "provider": "openrouter",
+    "family": "upstage",
+    "created_at": "2026-08-10 00:00:00 UTC",
+    "context_window": 524288,
+    "max_output_tokens": 131072,
+    "knowledge_cutoff": null,
+    "modalities": {
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ]
+    },
+    "capabilities": [
+      "streaming",
+      "function_calling",
+      "structured_output"
+    ],
+    "pricing": {
+      "text_tokens": {
+        "standard": {
+          "input_per_million": 0.03,
+          "output_per_million": 0.12,
+          "cache_read_input_per_million": 0.006
+        }
+      }
+    },
+    "metadata": {
+      "description": "Solar Pro 4 is Upstage's cost-efficient large language model, featuring a 524K context window. It is built for long-horizon tasks and agentic workflows, with strong capabilities in office productivity, document-intensive work, and coding.",
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "top_provider": {
+        "context_length": 524288,
+        "max_completion_tokens": 131072,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "include_reasoning",
+        "max_tokens",
+        "reasoning",
+        "response_format",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools"
+      ]
+    }
+  },
+  {
     "id": "writer/palmyra-x5",
     "name": "Writer: Palmyra X5",
     "provider": "openrouter",

@@ -3,15 +3,15 @@ class Captain::Tools::FaqLookupTool < Captain::Tools::BasePublicTool
   param :query, type: 'string', desc: 'The question or topic to search for in the FAQ database'
 
   def perform(tool_context, query:)
-    log_tool_usage('searching', { query: query })
+    log_tool_usage('searching', { query_length: query.to_s.length })
 
     # Use existing vector search on approved responses
     responses = @assistant.responses.approved.search(query).includes(:documentable).to_a
     record_retrieved_sources(tool_context, responses)
 
     if responses.empty?
-      log_tool_usage('no_results', { query: query })
-      "No relevant FAQs found for: #{query}"
+      log_tool_usage('no_results', { query_length: query.to_s.length })
+      no_verified_knowledge_message
     else
       log_tool_usage('found_results', { query: query, count: responses.size })
       format_responses(tool_context, responses)
@@ -40,6 +40,14 @@ class Captain::Tools::FaqLookupTool < Captain::Tools::BasePublicTool
 
   def format_responses(tool_context, responses)
     responses.map { |response| format_response(tool_context, response) }.join
+  end
+
+  def no_verified_knowledge_message
+    [
+      'No verified FAQ or RAG memory was found for this query.',
+      'Do not answer from model memory.',
+      'Say the available information is not enough to confirm the answer.'
+    ].join(' ')
   end
 
   def format_response(tool_context, response)
