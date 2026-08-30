@@ -25,4 +25,6 @@ RUN pnpm i --frozen-lockfile \
   && SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile \
   && rm -rf node_modules tmp/cache
 
+COPY deployment/mindbliss_support_agent_setup.rb /app/deployment/mindbliss_support_agent_setup.rb
+
 RUN echo "$BUILD_SHA" > /app/.git_sha
