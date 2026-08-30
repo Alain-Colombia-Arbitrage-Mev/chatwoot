@@ -100,6 +100,8 @@ RSpec.describe Captain::Assistant::AgentRunnerService do
 
       expect(configured_assistant.tools).to contain_exactly(faq_tool, get_tool)
       expect(configured_assistant.handoff_agents).to be_empty
+      expect(configured_assistant.model).to eq('upstage/solar-pro4')
+      expect(configured_assistant.provider).to eq(:openrouter)
     end
 
     it 'uses the Copilot prompt without changing the Assistant prompt path' do

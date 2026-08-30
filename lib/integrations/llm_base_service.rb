@@ -84,9 +84,7 @@ class Integrations::LlmBaseService
   end
 
   def api_base
-    endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || 'https://api.openai.com/'
-    endpoint = endpoint.chomp('/')
-    "#{endpoint}/v1"
+    Llm::Config.api_base_for
   end
 
   def make_api_call(body)
@@ -101,9 +99,11 @@ class Integrations::LlmBaseService
   def execute_ruby_llm_request(parsed_body)
     messages = parsed_body['messages']
     model = parsed_body['model']
-    credential = llm_credential
+    provider = Llm::Models.provider_for(model)
+    credential = llm_credential(provider: provider)
+    return { error: I18n.t('captain.api_key_missing'), request_messages: messages } if credential.blank?
 
-    Llm::Config.with_api_key(credential[:api_key], api_base: api_base) do |context|
+    Llm::Config.with_api_key(credential[:api_key], api_base: api_base, provider: provider) do |context|
       chat = context.chat(model: model)
       setup_chat_with_messages(chat, messages)
     end
@@ -166,8 +166,17 @@ class Integrations::LlmBaseService
     }
   end
 
-  def llm_credential
-    @llm_credential ||= { api_key: hook.settings['api_key'], source: :hook }
+  def llm_credential(provider: nil)
+    if provider.to_s == Llm::Config::OPENROUTER_PROVIDER
+      openrouter_llm_credential
+    else
+      { api_key: hook.settings['api_key'], source: :hook }
+    end
+  end
+
+  def openrouter_llm_credential
+    key = Llm::Config.provider_api_key(Llm::Config::OPENROUTER_PROVIDER)
+    { api_key: key, source: :system } if key.present?
   end
 
   def exception_tracking_account

@@ -32,6 +32,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(json_response).to have_key(:models)
         expect(json_response).to have_key(:features)
         expect(json_response[:features]).not_to have_key(:conversation_completion)
+        expect(json_response[:features]).not_to have_key(:reply_suggestion)
       end
     end
 
@@ -82,7 +83,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         )
       end
 
-      it 'returns GPT-5.2 as the assistant default for V2 accounts' do
+      it 'returns the Captain V2 assistant model as the assistant default for V2 accounts' do
         account.enable_features!('captain_integration_v2')
 
         get "/api/v1/accounts/#{account.id}/captain/preferences",
@@ -166,6 +167,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(response).to have_http_status(:success)
         expect(account.reload.captain_models).to eq('editor' => 'gpt-4.1-mini')
         expect(json_response[:features]).not_to have_key(:conversation_completion)
+        expect(json_response[:features]).not_to have_key(:reply_suggestion)
       end
 
       it 'rejects invalid captain model values for the feature' do

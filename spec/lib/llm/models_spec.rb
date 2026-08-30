@@ -32,6 +32,15 @@ RSpec.describe Llm::Models do
       expect(described_class.default_model_for('conversation_faq_matching')).to eq('gpt-4.1-mini')
     end
 
+    it 'routes reply suggestions through OpenRouter Solar Pro 4' do
+      expect(described_class.default_model_for('reply_suggestion')).to eq('upstage/solar-pro4')
+      expect(described_class.model_config('upstage/solar-pro4')).to include(
+        'provider' => 'openrouter',
+        'display_name' => 'Upstage Solar Pro 4'
+      )
+      expect(described_class.internal_feature?('reply_suggestion')).to be true
+    end
+
     it 'offers only supported OpenAI models for conversation completion' do
       expect(described_class.models_for('conversation_completion')).to eq(
         %w[gpt-4.1-mini gpt-5-mini gpt-4.1 gpt-5.1 gpt-5.2]

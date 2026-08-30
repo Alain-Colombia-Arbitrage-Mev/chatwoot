@@ -31,8 +31,8 @@ RSpec.describe Captain::ReplySuggestionService do
   end
 
   describe '#perform' do
-    it 'routes through the editor feature' do
-      expect(Llm::FeatureRouter).to receive(:resolve).with(feature: 'editor', account: account).and_call_original
+    it 'routes through the reply suggestion feature' do
+      expect(Llm::FeatureRouter).to receive(:resolve).with(feature: 'reply_suggestion', account: account).and_call_original
 
       service.perform
     end

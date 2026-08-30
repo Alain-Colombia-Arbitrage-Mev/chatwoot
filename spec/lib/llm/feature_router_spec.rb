@@ -47,6 +47,17 @@ RSpec.describe Llm::FeatureRouter do
       )
     end
 
+    it 'routes reply suggestions to OpenRouter Solar Pro 4 by default' do
+      resolved = described_class.resolve(feature: 'reply_suggestion', account: account)
+
+      expect(resolved).to eq(
+        feature: 'reply_suggestion',
+        provider: 'openrouter',
+        model: 'upstage/solar-pro4',
+        source: :default
+      )
+    end
+
     it 'uses the installation model for conversation completion on self-hosted Enterprise' do
       allow(ChatwootApp).to receive(:self_hosted_enterprise?).and_return(true)
       InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_MODEL').update!(value: 'gpt-5.1')
@@ -87,15 +98,15 @@ RSpec.describe Llm::FeatureRouter do
       )
     end
 
-    it 'resolves GPT-5.2 as the assistant default when Captain V2 is enabled without storing an account override' do
+    it 'resolves OpenRouter Solar Pro 4 as the assistant default when Captain V2 is enabled without storing an account override' do
       account.enable_features!('captain_integration_v2')
 
       resolved = described_class.resolve(feature: 'assistant', account: account)
 
       expect(resolved).to include(
         feature: 'assistant',
-        provider: 'openai',
-        model: 'gpt-5.2',
+        provider: 'openrouter',
+        model: described_class::CAPTAIN_V2_ASSISTANT_MODEL,
         source: :default
       )
       expect(account.reload.captain_models).to be_nil
