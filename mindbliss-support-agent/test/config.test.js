@@ -57,6 +57,49 @@ test('configures ticket operations from dedicated env without making token boot-
   assert.equal(cfg.tickets.token, 'ticket-token');
 });
 
+test('configures OpenRouter support brain without legacy VP service', () => {
+  const cfg = readConfig({
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',
+    CHATWOOT_API_ACCESS_TOKEN: 'chatwoot-token',
+    CHATWOOT_BASE_URL: 'http://rails:3000',
+    SUPPORT_AI_PROVIDER: 'openrouter',
+    OPENROUTER_API_KEY: 'openrouter-token',
+    OPENROUTER_CHAT_MODEL: 'upstage/solar-pro4',
+    OPENROUTER_HTTP_REFERER: 'https://soporte.mindblisspower.com',
+    MEMORY_ENABLED: 'false'
+  });
+
+  assert.equal(cfg.support.provider, 'openrouter');
+  assert.equal(cfg.support.url, '');
+  assert.equal(cfg.support.openRouter.apiKey, 'openrouter-token');
+  assert.equal(cfg.support.openRouter.chatUrl, 'https://openrouter.ai/api/v1/chat/completions');
+  assert.equal(cfg.support.openRouter.model, 'upstage/solar-pro4');
+  assert.equal(cfg.support.openRouter.referer, 'https://soporte.mindblisspower.com');
+  assert.equal(cfg.support.openRouter.maxTokens, 700);
+  assert.equal(cfg.support.openRouter.temperature, 0.2);
+});
+
+test('rejects OpenRouter support provider without api key', () => {
+  assert.throws(() => readConfig({
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',
+    CHATWOOT_API_ACCESS_TOKEN: 'chatwoot-token',
+    CHATWOOT_BASE_URL: 'http://rails:3000',
+    SUPPORT_AI_PROVIDER: 'openrouter',
+    OPENROUTER_API_KEY: 'CHANGE_ME',
+    MEMORY_ENABLED: 'false'
+  }), /OPENROUTER_CHAT_API_KEY or OPENROUTER_API_KEY/);
+});
+
+test('rejects unsupported support provider', () => {
+  assert.throws(() => readConfig({
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',
+    CHATWOOT_API_ACCESS_TOKEN: 'chatwoot-token',
+    CHATWOOT_BASE_URL: 'http://rails:3000',
+    SUPPORT_AI_PROVIDER: 'unknown',
+    MEMORY_ENABLED: 'false'
+  }), /Unsupported SUPPORT_AI_PROVIDER/);
+});
+
 test('rejects placeholder credentials inside falkordb url', () => {
   assert.throws(() => readConfig({
     CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',

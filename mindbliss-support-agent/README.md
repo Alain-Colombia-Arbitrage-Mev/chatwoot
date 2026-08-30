@@ -1,6 +1,6 @@
 # Mindbliss Support Agent
 
-Bridge between Chatwoot and the Mindbliss support brain.
+Bridge between Chatwoot and AI support agents for Mindbliss Power.
 
 Flow:
 
@@ -12,6 +12,36 @@ Flow:
 6. If enabled, it stores redacted vector memory in Qdrant and relation memory in FalkorDB.
 
 Public replies are disabled by default. Use `CHATWOOT_AI_PUBLIC_REPLIES=true` only after QA.
+
+## AI answer provider
+
+Use OpenRouter for the support AI agent:
+
+```env
+SUPPORT_AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=...
+OPENROUTER_CHAT_URL=https://openrouter.ai/api/v1/chat/completions
+OPENROUTER_CHAT_MODEL=upstage/solar-pro4
+OPENROUTER_HTTP_REFERER=https://soporte.mindblisspower.com
+OPENROUTER_APP_TITLE=Mindbliss Chatwoot Support Agent
+OPENROUTER_CHAT_TIMEOUT_MS=90000
+OPENROUTER_CHAT_MAX_TOKENS=700
+OPENROUTER_CHAT_TEMPERATURE=0.2
+OPENROUTER_CHAT_MAX_ANSWER_CHARS=1800
+```
+
+The agent asks the model for strict JSON with `answer`, `escalate` and `sources`.
+If the model returns free text or uncertain output, the bridge marks the case for
+human escalation instead of trusting the response. The `user` field sent to
+OpenRouter is a stable hash, not the contact email.
+
+The legacy provider still works when needed:
+
+```env
+SUPPORT_AI_PROVIDER=mindbliss
+VP_SUPPORT_AI_URL=http://mindbrain-vp-support:9096
+VP_SUPPORT_AI_TOKEN=...
+```
 
 ## Local test
 
@@ -30,9 +60,9 @@ docker compose -f docker-compose.production.yaml -f docker-compose.mindbliss-sup
 
 The compose overlay joins Chatwoot's default network and the support-only `ai-memory_default`
 network. On soporte, Qdrant, FalkorDB, `vp-support` and `vp-kb-indexer` live in `/opt/ai-memory`;
-the bridge reaches them as `http://mindbrain-qdrant:6333`,
-`redis://:<FALKORDB_PASSWORD>@mindbrain-falkordb:6379` and
-`http://mindbrain-vp-support:9096` inside that private Docker network.
+the bridge reaches memory services as `http://mindbrain-qdrant:6333` and
+`redis://:<FALKORDB_PASSWORD>@mindbrain-falkordb:6379` inside that private Docker network.
+`vp-support` is only required when `SUPPORT_AI_PROVIDER=mindbliss`.
 
 Chatwoot's own `REDIS_URL` is separate and should stay pointed at Chatwoot Redis
 (`redis:6379`) for Rails/Sidekiq. Do not reuse it for FalkorDB memory; FalkorDB
@@ -41,7 +71,9 @@ only shares the Redis wire protocol.
 Preferred production URLs:
 
 ```env
-VP_SUPPORT_AI_URL=http://mindbrain-vp-support:9096
+SUPPORT_AI_PROVIDER=openrouter
+OPENROUTER_CHAT_URL=https://openrouter.ai/api/v1/chat/completions
+OPENROUTER_CHAT_MODEL=upstage/solar-pro4
 QDRANT_URL=http://mindbrain-qdrant:6333
 FALKORDB_URL=redis://:<FALKORDB_PASSWORD>@mindbrain-falkordb:6379
 OPENROUTER_RERANK_URL=https://openrouter.ai/api/v1/rerank
