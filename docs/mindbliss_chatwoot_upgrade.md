@@ -112,13 +112,15 @@ MINDBLISS_EC2_USER=ubuntu
 MINDBLISS_EC2_SSH_KEY=<private SSH key with access to the EC2>
 ```
 
-Optionally configure this repository variable:
+Optionally configure these repository variables:
 
 ```text
 MINDBLISS_DEPLOY_HEALTH_URL=https://soporte.mindblisspower.com/api
+MINDBLISS_EC2_KNOWN_HOSTS=34.197.213.11 ssh-ed25519 <host public key>
 ```
 
 The workflow fetches the selected branch in
 `/opt/chatwoot/builds/chatwoot-mindbliss`, runs
 `deployment/mindbliss_chatwoot_upgrade.sh` with temporary swap, then verifies
-the `/api` health response.
+the `/api` health response. If `MINDBLISS_EC2_KNOWN_HOSTS` is present, SSH host
+key checking is strict against that value.

@@ -42,6 +42,7 @@ jobs:
     env:
       DEFAULT_HEALTH_URL: ${{ vars.MINDBLISS_DEPLOY_HEALTH_URL }}
       EC2_HOST: ${{ secrets.MINDBLISS_EC2_HOST }}
+      EC2_KNOWN_HOSTS: ${{ vars.MINDBLISS_EC2_KNOWN_HOSTS }}
       EC2_SSH_KEY: ${{ secrets.MINDBLISS_EC2_SSH_KEY }}
       EC2_USER: ${{ secrets.MINDBLISS_EC2_USER }}
       GITHUB_REF_NAME: ${{ github.ref_name }}
@@ -108,7 +109,26 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/mindbliss_ec2
           chmod 600 ~/.ssh/mindbliss_ec2
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+          touch ~/.ssh/known_hosts
+          strict_host_key_checking=accept-new
+          if [[ -n "${EC2_KNOWN_HOSTS:-}" ]]; then
+            printf '%s\n' "$EC2_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+            strict_host_key_checking=yes
+          fi
+
+          chmod 600 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host mindbliss-ec2
+            HostName $EC2_HOST
+            User $EC2_USER
+            IdentityFile ~/.ssh/mindbliss_ec2
+            IdentitiesOnly yes
+            StrictHostKeyChecking $strict_host_key_checking
+            UserKnownHostsFile ~/.ssh/known_hosts
+            ConnectTimeout 30
+          EOF
+          chmod 600 ~/.ssh/config
 
       - name: Deploy on EC2
         env:
@@ -117,7 +137,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ssh -i ~/.ssh/mindbliss_ec2 "$EC2_USER@$EC2_HOST" "sudo env DEPLOY_REF='$DEPLOY_REF' BUILD_SWAP_MB='$BUILD_SWAP_MB' bash -s" <<'REMOTE'
+          ssh mindbliss-ec2 "sudo env DEPLOY_REF='$DEPLOY_REF' BUILD_SWAP_MB='$BUILD_SWAP_MB' bash -s" <<'REMOTE'
           set -euo pipefail
 
           cd /opt/chatwoot/builds/chatwoot-mindbliss
