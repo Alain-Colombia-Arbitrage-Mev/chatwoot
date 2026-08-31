@@ -90,6 +90,13 @@ echo "Enabling Mindbliss Captain account features"
     "Account.find_each { |account| account.enable_features!(*%w[$captain_features]) }"
 )
 
+echo "Enforcing Mindbliss web widget support intake form"
+(
+  cd "$COMPOSE_PROJECT_DIR"
+  docker compose "${COMPOSE_FILES[@]}" run --rm rails bundle exec rails runner \
+    "Channel::WebWidget.find_each { |widget| widget.update!(pre_chat_form_enabled: true, pre_chat_form_options: Mindbliss::SupportPreChat.mandatory_options(widget.pre_chat_form_options)) }"
+)
+
 echo "Restarting Chatwoot Rails and Sidekiq with $IMAGE_TAG"
 (
   cd "$COMPOSE_PROJECT_DIR"
