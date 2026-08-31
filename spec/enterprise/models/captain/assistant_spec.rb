@@ -336,7 +336,7 @@ RSpec.describe Captain::Assistant, type: :model do
     it 'keeps the Assistant human handoff prompt unchanged' do
       instructions = assistant.agent_instructions
 
-      expect(instructions).to include('# Human Handoff Protocol', 'captain--tools--handoff')
+      expect(instructions).to include('# Human Handoff Protocol', '# Human Response Style', 'captain--tools--handoff')
       expect(instructions).not_to include('You are drafting a reply for a support agent to review.')
     end
 
@@ -351,6 +351,7 @@ RSpec.describe Captain::Assistant, type: :model do
 
       expect(instructions).to include(
         'You are drafting a reply for a support agent to review.',
+        '# Human Reply Style',
         'Include the raw guide URL https://yc.ms/eglb1H.',
         'Never add citation numbers or footnotes.'
       )
