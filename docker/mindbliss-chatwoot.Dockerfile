@@ -15,15 +15,21 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
 
 COPY app/javascript/dashboard/api/inbox/conversation.js /app/app/javascript/dashboard/api/inbox/conversation.js
 COPY app/javascript/dashboard/components-next/sidebar/Sidebar.vue /app/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+COPY app/javascript/dashboard/composables/useCaptain.js /app/app/javascript/dashboard/composables/useCaptain.js
+COPY app/javascript/dashboard/composables/usePolicy.js /app/app/javascript/dashboard/composables/usePolicy.js
 COPY app/javascript/dashboard/components/ChatList.vue /app/app/javascript/dashboard/components/ChatList.vue
 COPY app/javascript/dashboard/components/ChatListHeader.vue /app/app/javascript/dashboard/components/ChatListHeader.vue
 COPY app/javascript/dashboard/components/SupportTicketBoard.vue /app/app/javascript/dashboard/components/SupportTicketBoard.vue
+COPY app/javascript/dashboard/store/captain/preferences.js /app/app/javascript/dashboard/store/captain/preferences.js
+COPY app/javascript/dashboard/routes/dashboard/settings/captain/Index.vue /app/app/javascript/dashboard/routes/dashboard/settings/captain/Index.vue
+COPY app/javascript/dashboard/routes/dashboard/settings/captain/components/ModelDropdown.vue /app/app/javascript/dashboard/routes/dashboard/settings/captain/components/ModelDropdown.vue
 COPY app/javascript/dashboard/routes/dashboard/settings/agents/AddAgent.vue /app/app/javascript/dashboard/routes/dashboard/settings/agents/AddAgent.vue
 COPY app/javascript/dashboard/i18n/locale/en/chatlist.json /app/app/javascript/dashboard/i18n/locale/en/chatlist.json
 COPY app/javascript/dashboard/i18n/locale/en/settings.json /app/app/javascript/dashboard/i18n/locale/en/settings.json
 COPY app/javascript/dashboard/i18n/locale/es/chatlist.json /app/app/javascript/dashboard/i18n/locale/es/chatlist.json
 COPY app/javascript/dashboard/i18n/locale/es/settings.json /app/app/javascript/dashboard/i18n/locale/es/settings.json
 COPY app/controllers/api/v1/accounts/agents_controller.rb /app/app/controllers/api/v1/accounts/agents_controller.rb
+COPY app/controllers/api/v1/accounts/captain/preferences_controller.rb /app/app/controllers/api/v1/accounts/captain/preferences_controller.rb
 COPY app/controllers/concerns/conversation_custom_attributes_concern.rb /app/app/controllers/concerns/conversation_custom_attributes_concern.rb
 COPY app/controllers/super_admin/app_configs_controller.rb /app/app/controllers/super_admin/app_configs_controller.rb
 COPY app/mailers/agent_notifications/conversation_notifications_mailer.rb /app/app/mailers/agent_notifications/conversation_notifications_mailer.rb
@@ -32,6 +38,7 @@ COPY app/services/conversations/support_escalation_notification_service.rb /app/
 COPY app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_escalation.liquid /app/app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_escalation.liquid
 COPY enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb /app/enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb
 COPY enterprise/app/controllers/enterprise/super_admin/app_configs_controller.rb /app/enterprise/app/controllers/enterprise/super_admin/app_configs_controller.rb
+COPY enterprise/app/models/enterprise/account.rb /app/enterprise/app/models/enterprise/account.rb
 COPY enterprise/app/services/captain/assistant/agent_runner_service.rb /app/enterprise/app/services/captain/assistant/agent_runner_service.rb
 COPY enterprise/app/services/captain/tools/search_reply_documentation_service.rb /app/enterprise/app/services/captain/tools/search_reply_documentation_service.rb
 COPY enterprise/lib/captain/prompts/assistant.liquid /app/enterprise/lib/captain/prompts/assistant.liquid

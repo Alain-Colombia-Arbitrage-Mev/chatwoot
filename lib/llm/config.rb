@@ -58,6 +58,10 @@ module Llm::Config
       system_api_key
     end
 
+    def provider_configured?(provider)
+      provider_api_key(provider).present?
+    end
+
     private
 
     def configure_ruby_llm

@@ -20,7 +20,8 @@ class Api::V1::Accounts::Captain::PreferencesController < Api::V1::Accounts::Bas
     {
       providers: Llm::Models.providers,
       models: Llm::Models.models,
-      features: features_with_account_preferences
+      features: features_with_account_preferences,
+      runtime: runtime_payload
     }
   end
 
@@ -73,6 +74,49 @@ class Api::V1::Accounts::Captain::PreferencesController < Api::V1::Accounts::Bas
         source: route[:source]
       )
     end
+  end
+
+  def runtime_payload
+    assistant_route = llm_route_for('assistant')
+    reply_route = llm_route_for('reply_suggestion')
+
+    {
+      name: 'Mindbliss Captain',
+      provider: assistant_route[:provider],
+      provider_display_name: provider_display_name_for(assistant_route),
+      model: assistant_route[:model],
+      reply_suggestion_model: reply_route[:model],
+      openrouter_configured: openrouter_configured?,
+      memory: runtime_memory_payload,
+      guardrails: runtime_guardrails_payload
+    }
+  end
+
+  def llm_route_for(feature)
+    Llm::FeatureRouter.resolve(feature: feature, account: Current.account)
+  end
+
+  def provider_display_name_for(route)
+    Llm::Models.providers.dig(route[:provider].to_s, 'display_name')
+  end
+
+  def openrouter_configured?
+    Llm::Config.provider_configured?(Llm::Config::OPENROUTER_PROVIDER)
+  end
+
+  def runtime_memory_payload
+    {
+      vector_store: 'Qdrant',
+      graph_store: 'FalkorDB',
+      reranker: 'OpenRouter reranker'
+    }
+  end
+
+  def runtime_guardrails_payload
+    {
+      grounded: true,
+      hide_internal_sources: true
+    }
   end
 
   def default_model_for(feature_key)

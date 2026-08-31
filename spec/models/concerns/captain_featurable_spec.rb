@@ -5,6 +5,10 @@ require 'rails_helper'
 RSpec.describe CaptainFeaturable do
   let(:account) { create(:account) }
 
+  before do
+    allow(ChatwootApp).to receive(:self_hosted_enterprise?).and_return(false)
+  end
+
   describe 'dynamic method generation' do
     it 'generates enabled? methods for all features' do
       Llm::Models.feature_keys.each do |feature_key|

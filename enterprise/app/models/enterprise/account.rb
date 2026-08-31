@@ -1,4 +1,11 @@
 module Enterprise::Account
+  MINDBLISS_CAPTAIN_FEATURES = %w[
+    captain_integration
+    captain_integration_v2
+    captain_tasks
+    custom_tools
+  ].freeze
+
   class << self
     def captain_document_sync_intervals
       parse_captain_document_sync_intervals(InstallationConfig.find_by(name: 'CAPTAIN_DOCUMENT_AUTO_SYNC_INTERVALS')&.value)
@@ -102,7 +109,7 @@ module Enterprise::Account
 
   def enable_default_features
     super
-    enable_features('captain_integration', 'captain_integration_v2') if ChatwootApp.self_hosted_enterprise?
+    enable_features(*MINDBLISS_CAPTAIN_FEATURES) if ChatwootApp.self_hosted_enterprise?
   end
 
   def sync_assignment_features

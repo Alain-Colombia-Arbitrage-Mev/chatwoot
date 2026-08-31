@@ -50,6 +50,7 @@ describe('useCaptain', () => {
     useAccount.mockReturnValue({
       isCloudFeatureEnabled: vi.fn().mockReturnValue(true),
       currentAccount: { value: { limits: { captain: {} } } },
+      isOnChatwootCloud: { value: true },
     });
     useConfig.mockReturnValue({
       isEnterprise: false,
@@ -64,6 +65,22 @@ describe('useCaptain', () => {
     expect(captainTasksEnabled.value).toBe(true);
     expect(currentChat.value).toEqual({ id: '123' });
     expect(draftMessage.value).toBe('Draft message');
+  });
+
+  it('enables Captain on self-hosted enterprise instances', async () => {
+    useAccount.mockReturnValue({
+      isCloudFeatureEnabled: vi.fn().mockReturnValue(false),
+      currentAccount: { value: { limits: { captain: {} } } },
+      isOnChatwootCloud: { value: false },
+    });
+    useConfig.mockReturnValue({
+      isEnterprise: true,
+    });
+
+    const { captainEnabled, captainTasksEnabled } = useCaptain();
+
+    expect(captainEnabled.value).toBe(true);
+    expect(captainTasksEnabled.value).toBe(true);
   });
 
   it('rewrites content', async () => {

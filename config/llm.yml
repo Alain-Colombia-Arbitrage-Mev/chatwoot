@@ -97,10 +97,10 @@ features:
         gpt-5.2,
       ]
     default: upstage/solar-pro4
-    internal: true
   editor:
     models:
       [
+        upstage/solar-pro4,
         gpt-4.1-mini,
         gpt-4.1-nano,
         gpt-5-mini,
@@ -111,7 +111,7 @@ features:
         gemini-3-flash,
         gemini-3-pro,
       ]
-    default: gpt-4.1-mini
+    default: upstage/solar-pro4
   assistant:
     models:
       [
@@ -144,8 +144,15 @@ features:
     default: upstage/solar-pro4
   label_suggestion:
     models:
-      [gpt-4.1-nano, gpt-4.1-mini, gpt-5-mini, gemini-3-flash, claude-haiku-4.5]
-    default: gpt-4.1-mini
+      [
+        upstage/solar-pro4,
+        gpt-4.1-nano,
+        gpt-4.1-mini,
+        gpt-5-mini,
+        gemini-3-flash,
+        claude-haiku-4.5,
+      ]
+    default: upstage/solar-pro4
   document_faq_generation:
     models:
       [

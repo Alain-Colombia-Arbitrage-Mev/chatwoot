@@ -38,7 +38,8 @@ RSpec.describe Llm::Models do
         'provider' => 'openrouter',
         'display_name' => 'Upstage Solar Pro 4'
       )
-      expect(described_class.internal_feature?('reply_suggestion')).to be true
+      expect(described_class.feature_keys).to include('reply_suggestion')
+      expect(described_class.internal_feature?('reply_suggestion')).to be false
     end
 
     it 'offers only supported OpenAI models for conversation completion' do
@@ -65,11 +66,11 @@ RSpec.describe Llm::Models do
     it 'returns model metadata for a feature' do
       config = described_class.feature_config('editor')
 
-      expect(config[:default]).to eq('gpt-4.1-mini')
+      expect(config[:default]).to eq('upstage/solar-pro4')
       expect(config[:models].first).to include(
-        id: 'gpt-4.1-mini',
-        display_name: 'GPT-4.1 Mini',
-        provider: 'openai',
+        id: 'upstage/solar-pro4',
+        display_name: 'Upstage Solar Pro 4',
+        provider: 'openrouter',
         credit_multiplier: 1
       )
     end

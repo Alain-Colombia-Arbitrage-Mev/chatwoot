@@ -31,8 +31,9 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(json_response).to have_key(:providers)
         expect(json_response).to have_key(:models)
         expect(json_response).to have_key(:features)
+        expect(json_response).to have_key(:runtime)
         expect(json_response[:features]).not_to have_key(:conversation_completion)
-        expect(json_response[:features]).not_to have_key(:reply_suggestion)
+        expect(json_response[:features]).to have_key(:reply_suggestion)
       end
     end
 
@@ -46,6 +47,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(json_response).to have_key(:providers)
         expect(json_response).to have_key(:models)
         expect(json_response).to have_key(:features)
+        expect(json_response).to have_key(:runtime)
       end
 
       it 'returns effective model provider and source for each feature' do
@@ -65,8 +67,37 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(json_response.dig(:features, :label_suggestion)).to include(
           model: Llm::Models.default_model_for('label_suggestion'),
           selected: Llm::Models.default_model_for('label_suggestion'),
-          provider: 'openai',
+          provider: 'openrouter',
           source: 'default'
+        )
+      end
+
+      it 'returns the Mindbliss Captain runtime' do
+        allow(Llm::Config).to receive(:provider_configured?)
+          .with(Llm::Config::OPENROUTER_PROVIDER)
+          .and_return(false)
+
+        get "/api/v1/accounts/#{account.id}/captain/preferences",
+            headers: admin.create_new_auth_token,
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(json_response[:runtime]).to include(
+          name: 'Mindbliss Captain',
+          provider: 'openrouter',
+          provider_display_name: 'OpenRouter',
+          model: 'upstage/solar-pro4',
+          reply_suggestion_model: 'upstage/solar-pro4',
+          openrouter_configured: false
+        )
+        expect(json_response.dig(:runtime, :memory)).to include(
+          vector_store: 'Qdrant',
+          graph_store: 'FalkorDB',
+          reranker: 'OpenRouter reranker'
+        )
+        expect(json_response.dig(:runtime, :guardrails)).to include(
+          grounded: true,
+          hide_internal_sources: true
         )
       end
 
@@ -167,7 +198,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(response).to have_http_status(:success)
         expect(account.reload.captain_models).to eq('editor' => 'gpt-4.1-mini')
         expect(json_response[:features]).not_to have_key(:conversation_completion)
-        expect(json_response[:features]).not_to have_key(:reply_suggestion)
+        expect(json_response[:features]).to have_key(:reply_suggestion)
       end
 
       it 'rejects invalid captain model values for the feature' do
@@ -230,6 +261,23 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(account.reload.captain_models['pdf_faq_generation']).to eq('gpt-5.2')
       end
 
+      it 'updates captain_models for reply suggestions' do
+        put "/api/v1/accounts/#{account.id}/captain/preferences",
+            headers: admin.create_new_auth_token,
+            params: { captain_models: { reply_suggestion: 'gpt-4.1-mini' } },
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(json_response.dig(:features, :reply_suggestion)).to include(
+          selected: 'gpt-4.1-mini',
+          provider: 'openai',
+          source: 'account_override'
+        )
+        expect(account.reload.captain_models['reply_suggestion']).to eq(
+          'gpt-4.1-mini'
+        )
+      end
+
       it 'updates captain_features' do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
@@ -244,7 +292,12 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       end
 
       it 'merges with existing captain_models' do
-        account.update!(captain_models: { 'editor' => 'gpt-4.1-mini', 'assistant' => 'gpt-5.1' })
+        account.update!(
+          captain_models: {
+            'editor' => 'gpt-4.1-mini',
+            'assistant' => 'gpt-5.1'
+          }
+        )
 
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,

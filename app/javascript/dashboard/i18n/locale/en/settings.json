@@ -529,11 +529,23 @@
     }
   },
   "CAPTAIN_SETTINGS": {
-    "TITLE": "Captain Settings",
-    "DESCRIPTION": "Configure your AI models and features for Captain. Captain follows a credit based billing, you will be charged credits for every action Captain takes based on the model selected.",
+    "TITLE": "Mindbliss Captain Settings",
+    "DESCRIPTION": "Configure the AI models and support memory used by Mindbliss Captain.",
     "LOADING": "Loading Captain configuration...",
-    "LINK_TEXT": "Learn more about Captain Credits",
-    "NOT_ENABLED": "Captain is not enabled for your account. Please upgrade your plan to access Captain features.",
+    "LINK_TEXT": "Learn more about Captain",
+    "NOT_ENABLED": "Captain is not enabled for this account. Ask an administrator to enable Mindbliss Captain.",
+    "RUNTIME": {
+      "TITLE": "Runtime",
+      "DESCRIPTION": "Current AI stack for support automation.",
+      "PROVIDER": "LLM",
+      "MEMORY": "Memory",
+      "RERANKER": "Reranker",
+      "GUARDRAILS": "Guardrails",
+      "OPENROUTER_READY": "Key configured",
+      "OPENROUTER_MISSING": "Key missing",
+      "ACTIVE": "Active",
+      "GROUNDED": "Grounded replies"
+    },
     "MODEL_CONFIG": {
       "TITLE": "Model Configuration",
       "DESCRIPTION": "Select AI models for different features.",
@@ -543,6 +555,10 @@
       "EDITOR": {
         "TITLE": "Editor Features",
         "DESCRIPTION": "Powers smart compose, grammar corrections, tone adjustments, and content enhancement in your message editor."
+      },
+      "REPLY_SUGGESTION": {
+        "TITLE": "Suggested Replies",
+        "DESCRIPTION": "Powers the AI button that drafts an agent response from the current conversation and support memory."
       },
       "ASSISTANT": {
         "TITLE": "Assistant",

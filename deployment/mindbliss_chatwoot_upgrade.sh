@@ -20,6 +20,12 @@ if [[ -f "$DEPLOY_DIR/docker-compose.mindbliss-support.yaml" ]]; then
   COMPOSE_FILES+=(-f docker-compose.mindbliss-support.yaml)
 fi
 COMPOSE_FILES+=(-f docker-compose.support-crm.override.yaml)
+CAPTAIN_FEATURES=(
+  captain_integration
+  captain_integration_v2
+  captain_tasks
+  custom_tools
+)
 
 if [[ ! -d "$SOURCE_DIR/.git" ]]; then
   echo "SOURCE_DIR must be a Git worktree: $SOURCE_DIR" >&2
@@ -74,6 +80,14 @@ echo "Running Chatwoot database preparation with $IMAGE_TAG"
 (
   cd "$COMPOSE_PROJECT_DIR"
   docker compose "${COMPOSE_FILES[@]}" run --rm rails bundle exec rails db:chatwoot_prepare
+)
+
+echo "Enabling Mindbliss Captain account features"
+(
+  cd "$COMPOSE_PROJECT_DIR"
+  captain_features="${CAPTAIN_FEATURES[*]}"
+  docker compose "${COMPOSE_FILES[@]}" run --rm rails bundle exec rails runner \
+    "Account.find_each { |account| account.enable_features!(*%w[$captain_features]) }"
 )
 
 echo "Restarting Chatwoot Rails and Sidekiq with $IMAGE_TAG"

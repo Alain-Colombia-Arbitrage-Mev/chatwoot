@@ -16,7 +16,8 @@ import { CAPTAIN_ERROR_TYPES } from 'dashboard/composables/captain/constants';
 export function useCaptain() {
   const store = useStore();
   const { t } = useI18n();
-  const { isCloudFeatureEnabled, currentAccount } = useAccount();
+  const { isCloudFeatureEnabled, currentAccount, isOnChatwootCloud } =
+    useAccount();
   const { isEnterprise } = useConfig();
   const uiFlags = useMapGetter('accounts/getUIFlags');
   const currentChat = useMapGetter('getSelectedChat');
@@ -28,12 +29,22 @@ export function useCaptain() {
   const draftMessage = useFunctionGetter('draftMessages/get', draftKey);
 
   // === Feature Flags ===
+  const selfHostedCaptainEnabled = computed(() => {
+    return isEnterprise && !isOnChatwootCloud?.value;
+  });
+
   const captainEnabled = computed(() => {
-    return isCloudFeatureEnabled(FEATURE_FLAGS.CAPTAIN);
+    return (
+      isCloudFeatureEnabled(FEATURE_FLAGS.CAPTAIN) ||
+      selfHostedCaptainEnabled.value
+    );
   });
 
   const captainTasksEnabled = computed(() => {
-    return isCloudFeatureEnabled(FEATURE_FLAGS.CAPTAIN_TASKS);
+    return (
+      isCloudFeatureEnabled(FEATURE_FLAGS.CAPTAIN_TASKS) ||
+      selfHostedCaptainEnabled.value
+    );
   });
 
   // === Limits (Enterprise) ===

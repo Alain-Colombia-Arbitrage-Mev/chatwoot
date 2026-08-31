@@ -60,7 +60,7 @@ RSpec.describe Account do
   end
 
   describe 'captain defaults for new accounts' do
-    it 'does not store Captain model overrides or enable premium Captain features' do
+    it 'does not store Captain model overrides' do
       InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
         value: Featurable::FEATURE_LIST,
         locked: true
@@ -68,8 +68,6 @@ RSpec.describe Account do
 
       account = create(:account)
 
-      expect(account).not_to be_feature_enabled('captain_integration')
-      expect(account).not_to be_feature_enabled('captain_integration_v2')
       expect(account.captain_models).to be_nil
     end
   end
@@ -426,6 +424,10 @@ RSpec.describe Account do
 
   describe 'captain_preferences' do
     let(:account) { create(:account) }
+
+    before do
+      allow(ChatwootApp).to receive(:self_hosted_enterprise?).and_return(false)
+    end
 
     describe 'with no saved preferences' do
       before do

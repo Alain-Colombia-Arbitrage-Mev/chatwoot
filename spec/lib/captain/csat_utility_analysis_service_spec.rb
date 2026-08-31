@@ -6,6 +6,7 @@ RSpec.describe Captain::CsatUtilityAnalysisService do
 
   before do
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
+    create(:installation_config, name: 'CAPTAIN_OPENROUTER_API_KEY', value: 'openrouter-key')
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
   end
 

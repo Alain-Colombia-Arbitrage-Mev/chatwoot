@@ -13,6 +13,7 @@ RSpec.describe Captain::LabelSuggestionService do
 
   before do
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
+    create(:installation_config, name: 'CAPTAIN_OPENROUTER_API_KEY', value: 'openrouter-key')
     label1
     label2
     allow(Llm::Config).to receive(:with_api_key).and_yield(mock_context)
