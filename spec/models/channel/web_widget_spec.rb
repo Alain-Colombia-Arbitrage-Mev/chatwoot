@@ -13,7 +13,7 @@ RSpec.describe Channel::WebWidget do
       expect(channel_widget.pre_chat_form_options['pre_chat_fields'].length).to eq 3
       expect(field('fullName')).to include('enabled' => true, 'required' => true, 'label' => 'Nombre completo')
       expect(field('phoneNumber')).to include('enabled' => true, 'required' => true, 'label' => 'Telefono o WhatsApp')
-      expect(field('emailAddress')).to include('enabled' => false)
+      expect(field('emailAddress')).to include('enabled' => false, 'required' => false)
     end
 
     def field(name)

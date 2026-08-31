@@ -12,7 +12,7 @@ module Mindbliss::SupportPreChat
       'placeholder' => 'Correo electronico opcional',
       'name' => 'emailAddress',
       'type' => 'email',
-      'required' => true,
+      'required' => false,
       'enabled' => false
     },
     'fullName' => {

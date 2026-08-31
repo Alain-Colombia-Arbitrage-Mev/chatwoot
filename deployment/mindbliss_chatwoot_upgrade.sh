@@ -26,6 +26,8 @@ CAPTAIN_FEATURES=(
   captain_tasks
   custom_tools
 )
+SUPPORT_AGENT_SOURCE_DIR="$SOURCE_DIR/mindbliss-support-agent"
+SUPPORT_AGENT_DEPLOY_DIR="$DEPLOY_DIR/mindbliss-support-agent"
 
 if [[ ! -d "$SOURCE_DIR/.git" ]]; then
   echo "SOURCE_DIR must be a Git worktree: $SOURCE_DIR" >&2
@@ -102,5 +104,30 @@ echo "Restarting Chatwoot Rails and Sidekiq with $IMAGE_TAG"
   cd "$COMPOSE_PROJECT_DIR"
   docker compose "${COMPOSE_FILES[@]}" up -d rails sidekiq
 )
+
+if [[ -f "$DEPLOY_DIR/docker-compose.mindbliss-support.yaml" && -d "$SUPPORT_AGENT_SOURCE_DIR" ]]; then
+  if ! command -v rsync >/dev/null 2>&1; then
+    echo "rsync is required to sync $SUPPORT_AGENT_DEPLOY_DIR" >&2
+    exit 1
+  fi
+
+  case "$SUPPORT_AGENT_DEPLOY_DIR" in
+    "$DEPLOY_DIR"/mindbliss-support-agent) ;;
+    *)
+      echo "Refusing to sync unexpected support agent path: $SUPPORT_AGENT_DEPLOY_DIR" >&2
+      exit 1
+      ;;
+  esac
+
+  echo "Syncing Mindbliss support agent source"
+  mkdir -p "$SUPPORT_AGENT_DEPLOY_DIR"
+  rsync -a --delete --exclude node_modules "$SUPPORT_AGENT_SOURCE_DIR/" "$SUPPORT_AGENT_DEPLOY_DIR/"
+
+  echo "Rebuilding and restarting Mindbliss support agent"
+  (
+    cd "$COMPOSE_PROJECT_DIR"
+    docker compose "${COMPOSE_FILES[@]}" up -d --build mindbliss-support-agent
+  )
+fi
 
 echo "Deployed $IMAGE_TAG"
