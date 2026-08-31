@@ -16,6 +16,26 @@ RSpec.describe Channel::WebWidget do
       expect(field('emailAddress')).to include('enabled' => false, 'required' => false)
     end
 
+    it 'overrides legacy pre chat options for support intake' do
+      options = Mindbliss::SupportPreChat.mandatory_options(
+        'pre_chat_message' => 'Share your queries or comments here.',
+        'pre_chat_fields' => [
+          {
+            'field_type' => 'standard',
+            'label' => 'Email Id',
+            'name' => 'emailAddress',
+            'type' => 'email',
+            'required' => true,
+            'enabled' => true
+          }
+        ]
+      )
+
+      expect(options['pre_chat_message']).to eq Mindbliss::SupportPreChat::DEFAULT_MESSAGE
+      email_field = options['pre_chat_fields'].find { |item| item['name'] == 'emailAddress' }
+      expect(email_field).to include('enabled' => false, 'required' => false)
+    end
+
     def field(name)
       channel_widget.pre_chat_form_options['pre_chat_fields'].find { |item| item['name'] == name }
     end

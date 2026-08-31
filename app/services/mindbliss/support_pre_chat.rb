@@ -48,7 +48,7 @@ module Mindbliss::SupportPreChat
     options = normalize_options(existing_options)
 
     {
-      'pre_chat_message' => options['pre_chat_message'].presence || DEFAULT_MESSAGE,
+      'pre_chat_message' => DEFAULT_MESSAGE,
       'pre_chat_fields' => merged_fields(Array(options['pre_chat_fields']))
     }
   end
@@ -78,6 +78,7 @@ module Mindbliss::SupportPreChat
   end
 
   def required_overrides(name)
+    return { 'required' => false, 'enabled' => false } if name == 'emailAddress'
     return {} unless %w[fullName phoneNumber].include?(name)
 
     {
