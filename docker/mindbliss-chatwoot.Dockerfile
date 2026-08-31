@@ -34,6 +34,7 @@ COPY enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb 
 COPY enterprise/app/controllers/enterprise/super_admin/app_configs_controller.rb /app/enterprise/app/controllers/enterprise/super_admin/app_configs_controller.rb
 COPY enterprise/app/services/captain/assistant/agent_runner_service.rb /app/enterprise/app/services/captain/assistant/agent_runner_service.rb
 COPY enterprise/app/services/captain/tools/search_reply_documentation_service.rb /app/enterprise/app/services/captain/tools/search_reply_documentation_service.rb
+COPY enterprise/lib/captain/prompts/assistant.liquid /app/enterprise/lib/captain/prompts/assistant.liquid
 COPY enterprise/lib/captain/prompts/copilot_reply_suggestion.liquid /app/enterprise/lib/captain/prompts/copilot_reply_suggestion.liquid
 COPY enterprise/lib/captain/prompts/snippets/core_rules.liquid /app/enterprise/lib/captain/prompts/snippets/core_rules.liquid
 COPY enterprise/lib/captain/tools/faq_lookup_tool.rb /app/enterprise/lib/captain/tools/faq_lookup_tool.rb
