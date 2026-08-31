@@ -20,10 +20,16 @@ on:
       - develop
     paths:
       - 'app/javascript/dashboard/**'
+      - 'app/javascript/widget/**'
+      - 'app/models/channel/web_widget.rb'
+      - 'app/services/mindbliss/**'
       - 'deployment/mindbliss_chatwoot_upgrade.sh'
       - 'deployment/mindbliss_support_agent_setup.rb'
       - 'docker/mindbliss-chatwoot.Dockerfile'
+      - 'docker-compose.mindbliss-support.yaml'
       - 'docker-compose.support-crm.override.yaml'
+      - 'mindbliss-support-agent/**'
+      - '.env.mindbliss-support-agent.example'
       - 'VERSION_CW'
       - '.github/workflows/mindbliss-chatwoot-deploy.yml'
 
