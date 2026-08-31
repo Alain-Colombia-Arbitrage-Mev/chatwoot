@@ -19,6 +19,7 @@ const emit = defineEmits(['change']);
 const { isOnChatwootCloud } = useAccount();
 
 const PROVIDER_ICONS = {
+  openrouter: 'i-lucide-route',
   openai: 'i-ri-openai-fill',
   anthropic: 'i-ri-anthropic-line',
   mistral: 'i-logos-mistral-icon',

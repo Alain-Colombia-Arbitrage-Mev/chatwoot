@@ -13,6 +13,7 @@ RSpec.describe Captain::RewriteService do
 
   before do
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
+    create(:installation_config, name: 'CAPTAIN_OPENROUTER_API_KEY', value: 'openrouter-key')
     allow(Llm::Config).to receive(:with_api_key).and_yield(mock_context)
     allow(mock_chat).to receive(:with_instructions)
     allow(mock_chat).to receive(:ask).and_return(mock_response)

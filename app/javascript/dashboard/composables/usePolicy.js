@@ -6,9 +6,17 @@ import {
   getUserPermissions,
   hasPermissions,
 } from 'dashboard/helper/permissionsHelper';
-import { PREMIUM_FEATURES } from 'dashboard/featureFlags';
+import { FEATURE_FLAGS, PREMIUM_FEATURES } from 'dashboard/featureFlags';
 
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
+
+const SELF_HOSTED_CAPTAIN_FEATURES = [
+  FEATURE_FLAGS.CAPTAIN,
+  FEATURE_FLAGS.CAPTAIN_CUSTOM_TOOLS,
+  FEATURE_FLAGS.CAPTAIN_V2,
+  FEATURE_FLAGS.CAPTAIN_TASKS,
+  FEATURE_FLAGS.CAPTAIN_DOCUMENT_AUTO_SYNC,
+];
 
 export function usePolicy() {
   const user = useMapGetter('getCurrentUser');
@@ -53,6 +61,14 @@ export function usePolicy() {
   const isPremiumFeature = featureFlag => {
     if (!featureFlag) return true;
     return PREMIUM_FEATURES.includes(featureFlag);
+  };
+
+  const isSelfHostedCaptainFeature = featureFlag => {
+    return (
+      isEnterprise &&
+      !isOnChatwootCloud.value &&
+      SELF_HOSTED_CAPTAIN_FEATURES.includes(featureFlag)
+    );
   };
 
   const hasPremiumEnterprise = computed(() => {
@@ -116,6 +132,10 @@ export function usePolicy() {
     if (isPremiumFeature(flag)) {
       if (isOnChatwootCloud.value) {
         return !isFeatureFlagEnabled(flag);
+      }
+
+      if (isSelfHostedCaptainFeature(flag) && isFeatureFlagEnabled(flag)) {
+        return false;
       }
 
       if (isEnterprise) {

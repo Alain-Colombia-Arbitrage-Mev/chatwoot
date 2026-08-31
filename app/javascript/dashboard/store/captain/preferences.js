@@ -6,6 +6,7 @@ export const useCaptainConfigStore = defineStore('captainConfig', {
     providers: {},
     models: {},
     features: {},
+    runtime: {},
     uiFlags: {
       isFetching: false,
     },
@@ -15,12 +16,18 @@ export const useCaptainConfigStore = defineStore('captainConfig', {
     getProviders: state => state.providers,
     getModels: state => state.models,
     getFeatures: state => state.features,
+    getRuntime: state => state.runtime,
     getUIFlags: state => state.uiFlags,
     getModelsForFeature: state => featureKey => {
       const feature = state.features[featureKey];
       const models = feature?.models || [];
 
-      const providerOrder = { openai: 0, anthropic: 1, gemini: 2 };
+      const providerOrder = {
+        openrouter: 0,
+        openai: 1,
+        anthropic: 2,
+        gemini: 3,
+      };
 
       return [...models].sort((a, b) => {
         // Move coming_soon items to the end
@@ -54,6 +61,7 @@ export const useCaptainConfigStore = defineStore('captainConfig', {
         this.providers = response.data.providers || {};
         this.models = response.data.models || {};
         this.features = response.data.features || {};
+        this.runtime = response.data.runtime || {};
       } catch (error) {
         // Ignore error
       } finally {
@@ -66,6 +74,7 @@ export const useCaptainConfigStore = defineStore('captainConfig', {
       this.providers = response.data.providers || {};
       this.models = response.data.models || {};
       this.features = response.data.features || {};
+      this.runtime = response.data.runtime || {};
     },
   },
 });
