@@ -9,7 +9,10 @@ const OPENROUTER_SYSTEM_PROMPT = [
   'answer debe estar en espanol, ser corto, claro, accionable y no pasar de 8 lineas.',
   'No prometas reembolsos, activaciones, movimientos de dinero, compras, comisiones ni cambios de cuenta.',
   'Escala si requiere validar identidad, pagos, arbol binario, KYC, legal, seguridad, acceso bloqueado, estado de cuenta o si no hay certeza.',
-  'sources debe ser un arreglo corto de referencias disponibles en el prompt; si no hay fuentes, usa [].'
+  'Antes de responder, confirma que el caso tenga nombre completo, telefono o WhatsApp y descripcion corta; si faltan, pide solo lo faltante.',
+  'No inventes hechos, procesos, fuentes ni datos del cliente fuera del mensaje y de las memorias Qdrant/FalkorDB/reranker incluidas en el prompt.',
+  'Si no hay memoria o fuente suficiente para una respuesta confiable, pide aclaracion o marca escalate=true.',
+  'sources debe ser un arreglo corto de referencias disponibles en el prompt; si no hay fuentes, usa [].',
 ].join('\n');
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 'si', 'on']);
@@ -36,9 +39,9 @@ export class SupportBrain {
       headers: {
         'Content-Type': 'application/json',
         'X-VP-Service-Token': this.config.token,
-        'X-VP-User-Email': userEmail || 'chatwoot-support@mindblisspower.local'
+        'X-VP-User-Email': userEmail || 'chatwoot-support@mindblisspower.local',
       },
-      body: { message }
+      body: { message },
     });
   }
 
@@ -46,7 +49,7 @@ export class SupportBrain {
     const cfg = this.config.openRouter || {};
     const headers = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${cfg.apiKey}`
+      Authorization: `Bearer ${cfg.apiKey}`,
     };
     if (cfg.referer) headers['HTTP-Referer'] = cfg.referer;
     if (cfg.appTitle) headers['X-OpenRouter-Title'] = cfg.appTitle;
@@ -55,10 +58,10 @@ export class SupportBrain {
       model: cfg.model,
       messages: [
         { role: 'system', content: OPENROUTER_SYSTEM_PROMPT },
-        { role: 'user', content: String(message || '') }
+        { role: 'user', content: String(message || '') },
       ],
       temperature: cfg.temperature,
-      max_tokens: cfg.maxTokens
+      max_tokens: cfg.maxTokens,
     };
     const user = pseudonymousUser(userEmail);
     if (user) body.user = user;
@@ -67,14 +70,17 @@ export class SupportBrain {
       method: 'POST',
       timeoutMs: cfg.timeoutMs || this.config.timeoutMs,
       headers,
-      body
+      body,
     });
-    const parsed = parseSupportJson(contentFromOpenRouter(response), cfg.maxAnswerChars);
+    const parsed = parseSupportJson(
+      contentFromOpenRouter(response),
+      cfg.maxAnswerChars
+    );
     return {
       ...parsed,
       provider: 'openrouter',
       model: cfg.model,
-      usage: safeUsage(response?.usage)
+      usage: safeUsage(response?.usage),
     };
   }
 }
@@ -91,29 +97,48 @@ export function pseudonymousUser(value) {
 export function parseSupportJson(text, maxAnswerChars = 1800) {
   const parsed = parseJsonEnvelope(text);
   if (!parsed) {
-    const fallbackAnswer = cleanText(stripCodeFence(text)).slice(0, maxAnswerChars);
+    const fallbackAnswer = cleanText(stripCodeFence(text)).slice(
+      0,
+      maxAnswerChars
+    );
     return {
-      answer: fallbackAnswer || 'No se genero una respuesta automatica confiable; revisar manualmente.',
+      answer:
+        fallbackAnswer ||
+        'No se genero una respuesta automatica confiable; revisar manualmente.',
       escalate: true,
-      sources: []
+      sources: [],
     };
   }
 
-  const answer = cleanText(parsed.answer || parsed.respuesta || parsed.message || '').slice(0, maxAnswerChars);
+  const answer = cleanText(
+    parsed.answer || parsed.respuesta || parsed.message || ''
+  ).slice(0, maxAnswerChars);
   return {
-    answer: answer || 'No se genero una respuesta automatica confiable; revisar manualmente.',
-    escalate: boolLike(parsed.escalate ?? parsed.escalar ?? parsed.requires_escalation, true),
-    sources: normalizeSources(parsed.sources || parsed.fuentes)
+    answer:
+      answer ||
+      'No se genero una respuesta automatica confiable; revisar manualmente.',
+    escalate: boolLike(
+      parsed.escalate ?? parsed.escalar ?? parsed.requires_escalation,
+      true
+    ),
+    sources: normalizeSources(parsed.sources || parsed.fuentes),
   };
 }
 
 function contentFromOpenRouter(response) {
-  const content = response?.choices?.[0]?.message?.content ?? response?.choices?.[0]?.text ?? response?.output_text ?? '';
+  const content =
+    response?.choices?.[0]?.message?.content ??
+    response?.choices?.[0]?.text ??
+    response?.output_text ??
+    '';
   if (Array.isArray(content)) {
-    return content.map(part => {
-      if (typeof part === 'string') return part;
-      return part?.text || part?.content || '';
-    }).join('\n').trim();
+    return content
+      .map(part => {
+        if (typeof part === 'string') return part;
+        return part?.text || part?.content || '';
+      })
+      .join('\n')
+      .trim();
   }
   return String(content || '').trim();
 }
@@ -124,8 +149,11 @@ function parseJsonEnvelope(text) {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
-  const objectSlice = start >= 0 && end > start ? raw.slice(start, end + 1) : '';
-  const candidates = [raw, fenced, stripCodeFence(raw), objectSlice].filter(Boolean);
+  const objectSlice =
+    start >= 0 && end > start ? raw.slice(start, end + 1) : '';
+  const candidates = [raw, fenced, stripCodeFence(raw), objectSlice].filter(
+    Boolean
+  );
 
   for (const candidate of candidates) {
     try {
@@ -160,25 +188,35 @@ function boolLike(value, fallback) {
 
 function normalizeSources(value) {
   const list = Array.isArray(value) ? value : value ? [value] : [];
-  return list.map(source => {
-    if (typeof source === 'string') {
-      const title = cleanText(source).slice(0, 160);
-      return title ? { title } : null;
-    }
-    if (!source || typeof source !== 'object') return null;
-    const title = cleanText(source.title || source.titulo || source.id || source.url || '').slice(0, 160);
-    const score = Number.parseFloat(source.score ?? source.relevance_score);
-    const out = {};
-    if (title) out.title = title;
-    if (Number.isFinite(score)) out.score = score;
-    return Object.keys(out).length > 0 ? out : null;
-  }).filter(Boolean).slice(0, 5);
+  return list
+    .map(source => {
+      if (typeof source === 'string') {
+        const title = cleanText(source).slice(0, 160);
+        return title ? { title } : null;
+      }
+      if (!source || typeof source !== 'object') return null;
+      const title = cleanText(
+        source.title || source.titulo || source.id || source.url || ''
+      ).slice(0, 160);
+      const score = Number.parseFloat(source.score ?? source.relevance_score);
+      const out = {};
+      if (title) out.title = title;
+      if (Number.isFinite(score)) out.score = score;
+      return Object.keys(out).length > 0 ? out : null;
+    })
+    .filter(Boolean)
+    .slice(0, 5);
 }
 
 function safeUsage(usage) {
   if (!usage || typeof usage !== 'object') return undefined;
   const out = {};
-  for (const key of ['prompt_tokens', 'completion_tokens', 'total_tokens', 'cost']) {
+  for (const key of [
+    'prompt_tokens',
+    'completion_tokens',
+    'total_tokens',
+    'cost',
+  ]) {
     if (usage[key] !== undefined) out[key] = usage[key];
   }
   return Object.keys(out).length > 0 ? out : undefined;

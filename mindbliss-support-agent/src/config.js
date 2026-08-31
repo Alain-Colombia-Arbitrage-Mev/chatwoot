@@ -58,6 +58,12 @@ export function readConfig(env = process.env) {
       enabled: boolFrom(env.KNOWLEDGE_COMMANDS_ENABLED, true),
       maxChars: intFrom(env.KNOWLEDGE_COMMAND_MAX_CHARS, 8000)
     },
+    resolutionMemory: {
+      enabled: boolFrom(env.RESOLUTION_MEMORY_ENABLED, true),
+      includePrivate: boolFrom(env.RESOLUTION_MEMORY_INCLUDE_PRIVATE, false),
+      maxMessages: intFrom(env.RESOLUTION_MEMORY_MAX_MESSAGES, 150),
+      chunkMaxChars: intFrom(env.RESOLUTION_MEMORY_CHUNK_MAX_CHARS, 3500)
+    },
     tickets: {
       enabled: boolFrom(env.SUPPORT_TICKETS_ENABLED, true),
       token: env.SUPPORT_TICKET_TOKEN || '',

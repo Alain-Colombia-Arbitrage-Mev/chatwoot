@@ -69,7 +69,10 @@ describe('#createConversation', () => {
           timestamp: 'mock date',
           referer_url: '',
         },
-        custom_attributes: { order_id: '12345' },
+        custom_attributes: {
+          order_id: '12345',
+          initial_problem_description: 'hey',
+        },
       },
     });
     spy.mockRestore();

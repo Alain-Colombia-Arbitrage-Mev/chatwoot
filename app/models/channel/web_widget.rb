@@ -39,6 +39,7 @@ class Channel::WebWidget < ApplicationRecord
                                                  :locale, { values: [] }, :regex_pattern, :regex_cue] }] },
                     { selected_feature_flags: [] }].freeze
 
+  before_validation :enable_mindbliss_pre_chat_form, on: :create
   before_validation :validate_pre_chat_options
   validates :website_url, presence: true
   validates :widget_color, presence: true
@@ -82,22 +83,11 @@ class Channel::WebWidget < ApplicationRecord
   end
 
   def validate_pre_chat_options
-    return if pre_chat_form_options.with_indifferent_access['pre_chat_fields'].present?
+    self.pre_chat_form_options = Mindbliss::SupportPreChat.default_options(pre_chat_form_options)
+  end
 
-    self.pre_chat_form_options = {
-      pre_chat_message: 'Share your queries or comments here.',
-      pre_chat_fields: [
-        {
-          'field_type': 'standard', 'label': 'Email Id', 'name': 'emailAddress', 'type': 'email', 'required': true, 'enabled': false
-        },
-        {
-          'field_type': 'standard', 'label': 'Full name', 'name': 'fullName', 'type': 'text', 'required': false, 'enabled': false
-        },
-        {
-          'field_type': 'standard', 'label': 'Phone number', 'name': 'phoneNumber', 'type': 'text', 'required': false, 'enabled': false
-        }
-      ]
-    }
+  def enable_mindbliss_pre_chat_form
+    self.pre_chat_form_enabled = true if pre_chat_form_enabled.blank?
   end
 
   def create_contact_inbox(additional_attributes = {})

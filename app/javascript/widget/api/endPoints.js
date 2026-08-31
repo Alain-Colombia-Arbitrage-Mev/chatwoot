@@ -4,6 +4,10 @@ import { generateEventParams } from './events';
 const createConversation = params => {
   const referrerURL = window.referrerURL || '';
   const search = buildSearchParamsWithLocale(window.location.search);
+  const customAttributes = {
+    ...(params.customAttributes || {}),
+    initial_problem_description: params.message,
+  };
   return {
     url: `/api/v1/widget/conversations${search}`,
     params: {
@@ -18,7 +22,7 @@ const createConversation = params => {
         timestamp: new Date().toString(),
         referer_url: referrerURL,
       },
-      custom_attributes: params.customAttributes,
+      custom_attributes: customAttributes,
     },
   };
 };

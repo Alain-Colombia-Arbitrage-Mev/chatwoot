@@ -76,18 +76,18 @@
         "VALID_ERROR": "Por favor, introduzca una dirección de correo válida"
       },
       "PHONE_NUMBER": {
-        "LABEL": "Número telefónico",
-        "PLACEHOLDER": "Por favor ingrese su número de teléfono",
-        "REQUIRED_ERROR": "El número de teléfono es obligatorio",
+        "LABEL": "Teléfono o WhatsApp",
+        "PLACEHOLDER": "Ingrese su teléfono o WhatsApp",
+        "REQUIRED_ERROR": "El teléfono o WhatsApp es obligatorio",
         "DIAL_CODE_VALID_ERROR": "Por favor seleccione un código de país",
         "VALID_ERROR": "Por favor ingrese un número de teléfono válido",
         "DROPDOWN_EMPTY": "No se encontraron resultados",
         "DROPDOWN_SEARCH": "Buscar país"
       },
       "MESSAGE": {
-        "LABEL": "Mensaje",
-        "PLACEHOLDER": "Introduzca su mensaje",
-        "ERROR": "Mensaje demasiado corto"
+        "LABEL": "Descripción corta del problema",
+        "PLACEHOLDER": "Cuéntenos brevemente qué necesita resolver",
+        "ERROR": "Describa brevemente el problema"
       }
     },
     "CAMPAIGN_HEADER": "Por favor, introduce tu nombre y correo electrónico antes de iniciar la conversación",

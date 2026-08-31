@@ -10,6 +10,7 @@ Flow:
 4. Support messages are enriched with Qdrant + FalkorDB + OpenRouter rerank memory.
 5. The bridge adds labels, priority and a private note for the human support team.
 6. If enabled, it stores redacted vector memory in Qdrant and relation memory in FalkorDB.
+7. When a case is resolved, it stores the resolution transcript as memory for future answers.
 
 Public replies are disabled by default. Use `CHATWOOT_AI_PUBLIC_REPLIES=true` only after QA.
 
@@ -78,7 +79,20 @@ QDRANT_URL=http://mindbrain-qdrant:6333
 FALKORDB_URL=redis://:<FALKORDB_PASSWORD>@mindbrain-falkordb:6379
 OPENROUTER_RERANK_URL=https://openrouter.ai/api/v1/rerank
 SUPPORT_RERANK_MODEL=cohere/rerank-4-pro
+RESOLUTION_MEMORY_ENABLED=true
+RESOLUTION_MEMORY_INCLUDE_PRIVATE=false
+RESOLUTION_MEMORY_MAX_MESSAGES=150
+RESOLUTION_MEMORY_CHUNK_MAX_CHARS=3500
 ```
+
+## Resolved case memory
+
+The AgentBot receives `conversation_resolved` and `conversation_status_changed`
+events from Chatwoot. When the final status is `resolved`, the bridge fetches
+the conversation messages through the Chatwoot API, skips private notes by
+default, redacts sensitive values through the memory store, and writes chunks
+with `source=chatwoot_resolution` to Qdrant and FalkorDB. Stored cases receive
+the Chatwoot label `mb_ai_memory_trained`.
 
 Keep Qdrant and FalkorDB bound to localhost/private Docker networks. Use an SSH
 tunnel for dashboards and debugging instead of exposing database ports publicly.
