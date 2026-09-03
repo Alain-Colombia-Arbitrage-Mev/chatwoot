@@ -33,7 +33,7 @@ const emit = defineEmits([
 
 const { t } = useI18n();
 const searchQuery = ref('');
-const activeBoardFilter = ref('active');
+const activeBoardFilter = ref('all');
 
 const ACTIVE_STATUSES = new Set(['open', 'pending', 'snoozed']);
 const STATUS_OPTIONS = ['open', 'pending', 'snoozed', 'resolved'];
@@ -132,6 +132,58 @@ function ticketNeedsRouting(ticket) {
   );
 }
 
+function booleanAttribute(value) {
+  return value === true || value === 'true';
+}
+
+function ticketHasResolutionReview(ticket) {
+  const attrs = ticket.custom_attributes || {};
+  return (
+    booleanAttribute(attrs.support_resolution_reviewed) ||
+    Object.prototype.hasOwnProperty.call(attrs, 'support_resolution_complete')
+  );
+}
+
+function ticketIsResolutive(ticket) {
+  return booleanAttribute(
+    ticket.custom_attributes?.support_resolution_complete
+  );
+}
+
+function ticketHasEnded(ticket) {
+  return booleanAttribute(ticket.custom_attributes?.support_conversation_ended);
+}
+
+function resolutionReviewLabel(ticket) {
+  if (!ticketHasResolutionReview(ticket)) {
+    return t('CHAT_LIST.TICKET_BOARD.REVIEW.UNREVIEWED');
+  }
+
+  return ticketIsResolutive(ticket)
+    ? t('CHAT_LIST.TICKET_BOARD.REVIEW.RESOLUTIVE')
+    : t('CHAT_LIST.TICKET_BOARD.REVIEW.NOT_RESOLUTIVE');
+}
+
+function endedReviewLabel(ticket) {
+  if (!ticketHasResolutionReview(ticket)) {
+    return t('CHAT_LIST.TICKET_BOARD.REVIEW.UNREVIEWED');
+  }
+
+  return ticketHasEnded(ticket)
+    ? t('CHAT_LIST.TICKET_BOARD.REVIEW.ENDED')
+    : t('CHAT_LIST.TICKET_BOARD.REVIEW.NOT_ENDED');
+}
+
+function reviewBadgeClass(ticket, matched) {
+  if (!ticketHasResolutionReview(ticket)) {
+    return 'bg-n-slate-3 text-n-slate-11';
+  }
+
+  return matched
+    ? 'bg-n-teal-3 text-n-teal-11'
+    : 'bg-n-amber-3 text-n-amber-11';
+}
+
 function ticketIdLabel(ticket) {
   return `#${ticket.display_id || ticket.id}`;
 }
@@ -216,6 +268,8 @@ function matchesBoardFilter(ticket) {
       return ticket.status === 'pending';
     case 'resolved':
       return ticket.status === 'resolved';
+    case 'not_resolutive':
+      return ticketHasResolutionReview(ticket) && !ticketIsResolutive(ticket);
     case 'escalated':
       return ticketIsEscalated(ticket);
     case 'unassigned':
@@ -242,6 +296,13 @@ const pendingCount = computed(
 
 const resolvedCount = computed(
   () => props.tickets.filter(ticket => ticket.status === 'resolved').length
+);
+
+const notResolutiveCount = computed(
+  () =>
+    props.tickets.filter(
+      ticket => ticketHasResolutionReview(ticket) && !ticketIsResolutive(ticket)
+    ).length
 );
 
 const escalatedCount = computed(
@@ -272,6 +333,12 @@ const summaryItems = computed(() => [
     icon: 'i-lucide-circle-check',
   },
   {
+    key: 'not_resolutive',
+    label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.NOT_RESOLUTIVE'),
+    value: notResolutiveCount.value,
+    icon: 'i-lucide-circle-help',
+  },
+  {
     key: 'escalated',
     label: t('CHAT_LIST.TICKET_BOARD.SUMMARY.ESCALATED'),
     value: escalatedCount.value,
@@ -293,6 +360,8 @@ function boardFilterValue(key) {
       return pendingCount.value;
     case 'resolved':
       return resolvedCount.value;
+    case 'not_resolutive':
+      return notResolutiveCount.value;
     case 'escalated':
       return escalatedCount.value;
     case 'unassigned':
@@ -303,6 +372,11 @@ function boardFilterValue(key) {
 }
 
 const boardFilterItems = computed(() => [
+  {
+    key: 'all',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.ALL'),
+    value: boardFilterValue('all'),
+  },
   {
     key: 'active',
     label: t('CHAT_LIST.TICKET_BOARD.FILTERS.ACTIVE'),
@@ -319,6 +393,11 @@ const boardFilterItems = computed(() => [
     value: boardFilterValue('resolved'),
   },
   {
+    key: 'not_resolutive',
+    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.NOT_RESOLUTIVE'),
+    value: boardFilterValue('not_resolutive'),
+  },
+  {
     key: 'escalated',
     label: t('CHAT_LIST.TICKET_BOARD.FILTERS.ESCALATED'),
     value: boardFilterValue('escalated'),
@@ -327,11 +406,6 @@ const boardFilterItems = computed(() => [
     key: 'unassigned',
     label: t('CHAT_LIST.TICKET_BOARD.FILTERS.UNASSIGNED'),
     value: boardFilterValue('unassigned'),
-  },
-  {
-    key: 'all',
-    label: t('CHAT_LIST.TICKET_BOARD.FILTERS.ALL'),
-    value: boardFilterValue('all'),
   },
 ]);
 
@@ -416,7 +490,7 @@ function onEscalationChange(ticket, escalated) {
         />
       </div>
 
-      <div class="grid grid-cols-2 gap-2 mt-3 xl:grid-cols-5">
+      <div class="grid grid-cols-2 gap-2 mt-3 xl:grid-cols-6">
         <div
           v-for="item in summaryItems"
           :key="item.key"
@@ -485,7 +559,7 @@ function onEscalationChange(ticket, escalated) {
     </div>
 
     <div class="flex-1 min-h-0 overflow-auto">
-      <table class="min-w-[900px] w-full border-separate border-spacing-0">
+      <table class="min-w-[1060px] w-full border-separate border-spacing-0">
         <thead class="sticky top-0 z-10 bg-n-surface-1">
           <tr class="text-left border-b border-n-weak">
             <th
@@ -511,6 +585,16 @@ function onEscalationChange(ticket, escalated) {
             <th
               class="px-2 py-2 text-xxs font-semibold uppercase text-n-slate-11"
             >
+              {{ t('CHAT_LIST.TICKET_BOARD.COLUMNS.RESOLUTIVE') }}
+            </th>
+            <th
+              class="px-2 py-2 text-xxs font-semibold uppercase text-n-slate-11"
+            >
+              {{ t('CHAT_LIST.TICKET_BOARD.COLUMNS.ENDED') }}
+            </th>
+            <th
+              class="px-2 py-2 text-xxs font-semibold uppercase text-n-slate-11"
+            >
               {{ t('CHAT_LIST.TICKET_BOARD.COLUMNS.RESPONSIBLE') }}
             </th>
             <th
@@ -528,13 +612,13 @@ function onEscalationChange(ticket, escalated) {
         </thead>
         <tbody>
           <tr v-if="isLoading && !tickets.length">
-            <td colspan="8" class="px-3 py-6 text-center text-n-slate-11">
+            <td colspan="10" class="px-3 py-6 text-center text-n-slate-11">
               <Spinner class="inline-block text-n-brand" />
             </td>
           </tr>
           <tr v-else-if="!visibleTickets.length">
             <td
-              colspan="8"
+              colspan="10"
               class="px-3 py-6 text-center text-sm text-n-slate-11"
             >
               {{ t('CHAT_LIST.TICKET_BOARD.EMPTY') }}
@@ -657,6 +741,24 @@ function onEscalationChange(ticket, escalated) {
                   @click.stop="onEscalationChange(ticket, false)"
                 />
               </div>
+            </td>
+            <td class="px-2 py-3 align-top border-b border-n-weak">
+              <span
+                class="inline-flex items-center max-w-36 px-2 py-1 text-xs font-medium rounded-md"
+                :class="reviewBadgeClass(ticket, ticketIsResolutive(ticket))"
+              >
+                <span class="truncate">{{
+                  resolutionReviewLabel(ticket)
+                }}</span>
+              </span>
+            </td>
+            <td class="px-2 py-3 align-top border-b border-n-weak">
+              <span
+                class="inline-flex items-center max-w-32 px-2 py-1 text-xs font-medium rounded-md"
+                :class="reviewBadgeClass(ticket, ticketHasEnded(ticket))"
+              >
+                <span class="truncate">{{ endedReviewLabel(ticket) }}</span>
+              </span>
             </td>
             <td class="px-2 py-3 align-top border-b border-n-weak" @click.stop>
               <select

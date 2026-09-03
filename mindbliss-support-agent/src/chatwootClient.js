@@ -142,6 +142,13 @@ export class ChatwootClient {
     return this.setStatus(accountId, conversationId, 'resolved');
   }
 
+  async updateConversationCustomAttributes(accountId, conversationId, customAttributes) {
+    return this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}/custom_attributes`, {
+      method: 'POST',
+      body: { custom_attributes: customAttributes }
+    });
+  }
+
   async setStatus(accountId, conversationId, status) {
     return this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}/toggle_status`, {
       method: 'POST',

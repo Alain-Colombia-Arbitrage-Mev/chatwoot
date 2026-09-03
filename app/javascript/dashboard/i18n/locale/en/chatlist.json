@@ -47,6 +47,7 @@
         "ACTIVE": "Active",
         "PENDING": "Pending",
         "RESOLVED": "Resolved",
+        "NOT_RESOLUTIVE": "Not resolutive",
         "ESCALATED": "Escalated",
         "UNASSIGNED": "Unassigned",
         "ALL": "All"
@@ -57,6 +58,7 @@
         "OPEN": "Open",
         "PENDING": "Pending",
         "RESOLVED": "Resolved",
+        "NOT_RESOLUTIVE": "Not resol.",
         "ESCALATED": "Escalated",
         "UNASSIGNED": "Unassigned",
         "URGENT": "Urgent",
@@ -67,9 +69,18 @@
         "STATUS": "Status",
         "PRIORITY": "Priority",
         "ESCALATION": "Escalation",
+        "RESOLUTIVE": "Resolutive",
+        "ENDED": "Ended",
         "RESPONSIBLE": "Owner",
         "TEAM": "Team",
         "UPDATED": "Updated"
+      },
+      "REVIEW": {
+        "UNREVIEWED": "Unreviewed",
+        "RESOLUTIVE": "Resolutive",
+        "NOT_RESOLUTIVE": "Not resolutive",
+        "ENDED": "Ended",
+        "NOT_ENDED": "Not ended"
       }
     },
     "FILTER_ALL": "All",

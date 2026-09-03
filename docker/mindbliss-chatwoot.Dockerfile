@@ -49,7 +49,9 @@ COPY app/services/mindbliss /app/app/services/mindbliss
 COPY app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_escalation.liquid /app/app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_escalation.liquid
 COPY enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb /app/enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb
 COPY enterprise/app/controllers/enterprise/super_admin/app_configs_controller.rb /app/enterprise/app/controllers/enterprise/super_admin/app_configs_controller.rb
+COPY enterprise/app/jobs/captain/inbox_pending_conversations_resolution_job.rb /app/enterprise/app/jobs/captain/inbox_pending_conversations_resolution_job.rb
 COPY enterprise/app/models/enterprise/account.rb /app/enterprise/app/models/enterprise/account.rb
+COPY enterprise/app/services/captain/conversation_resolution_review.rb /app/enterprise/app/services/captain/conversation_resolution_review.rb
 COPY enterprise/app/services/captain/assistant/agent_runner_service.rb /app/enterprise/app/services/captain/assistant/agent_runner_service.rb
 COPY enterprise/app/services/captain/tools/search_reply_documentation_service.rb /app/enterprise/app/services/captain/tools/search_reply_documentation_service.rb
 COPY enterprise/lib/captain/prompts/assistant.liquid /app/enterprise/lib/captain/prompts/assistant.liquid
