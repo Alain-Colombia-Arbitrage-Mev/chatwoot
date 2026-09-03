@@ -99,6 +99,13 @@ echo "Enforcing Mindbliss web widget support intake form"
     "Channel::WebWidget.find_each { |widget| widget.update!(pre_chat_form_enabled: true, pre_chat_form_options: Mindbliss::SupportPreChat.mandatory_options(widget.pre_chat_form_options)) }"
 )
 
+echo "Provisioning Mindbliss persuasive support canned responses"
+(
+  cd "$COMPOSE_PROJECT_DIR"
+  docker compose "${COMPOSE_FILES[@]}" run --rm rails bundle exec rails runner \
+    "Mindbliss::SupportCannedResponses.provision_all!"
+)
+
 echo "Restarting Chatwoot Rails and Sidekiq with $IMAGE_TAG"
 (
   cd "$COMPOSE_PROJECT_DIR"
