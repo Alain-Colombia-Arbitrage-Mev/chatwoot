@@ -25,6 +25,16 @@ export function readConfig(env = process.env) {
       notePrefix: env.CHATWOOT_AI_NOTE_PREFIX || 'Mindbliss AI',
       forwardedProto: env.CHATWOOT_INTERNAL_FORWARDED_PROTO || 'https'
     },
+    routing: {
+      enabled: boolFrom(env.SUPPORT_ROUTING_ENABLED, true),
+      rules: env.SUPPORT_ROUTING_RULES || '',
+      defaultTeamId: intFrom(env.SUPPORT_ROUTING_DEFAULT_TEAM_ID, 0),
+      defaultAssigneeEmail: env.SUPPORT_ROUTING_DEFAULT_ASSIGNEE_EMAIL || '',
+      priorityTeamMap: mapFrom(env.SUPPORT_ROUTING_PRIORITY_TEAM_MAP || env.CHATWOOT_PRIORITY_TEAM_MAP || ''),
+      stickyReturningAgent: boolFrom(env.SUPPORT_ROUTING_STICKY_RETURNING_AGENT, true),
+      preferAvailableAgents: boolFrom(env.SUPPORT_ROUTING_PREFER_AVAILABLE_AGENTS, true),
+      allowedAgentRoles: listFrom(env.SUPPORT_ROUTING_ALLOWED_AGENT_ROLES || 'agent')
+    },
     support: {
       provider: supportProvider,
       url: stripTrailingSlash(env.VP_SUPPORT_AI_URL || ''),
@@ -162,4 +172,11 @@ function mapFrom(value) {
     if (Number.isFinite(id) && id > 0) out[priority.toLowerCase()] = id;
   }
   return out;
+}
+
+function listFrom(value) {
+  return Array.from(new Set(String(value || '')
+    .split(',')
+    .map(part => part.trim().toLowerCase())
+    .filter(Boolean)));
 }

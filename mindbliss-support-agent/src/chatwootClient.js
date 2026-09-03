@@ -142,10 +142,13 @@ export class ChatwootClient {
     return this.setStatus(accountId, conversationId, 'resolved');
   }
 
-  async updateConversationCustomAttributes(accountId, conversationId, customAttributes) {
+  async updateConversationCustomAttributes(accountId, conversationId, customAttributes, { merge = true } = {}) {
     return this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}/custom_attributes`, {
       method: 'POST',
-      body: { custom_attributes: customAttributes }
+      body: {
+        custom_attributes: customAttributes,
+        merge
+      }
     });
   }
 

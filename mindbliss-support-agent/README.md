@@ -9,8 +9,9 @@ Flow:
 3. Non-support or private/outgoing messages are ignored.
 4. Support messages are enriched with Qdrant + FalkorDB + OpenRouter rerank memory.
 5. The bridge adds labels, priority and a private note for the human support team.
-6. If enabled, it stores redacted vector memory in Qdrant and relation memory in FalkorDB.
-7. When a case is resolved, it stores the resolution transcript as memory for future answers.
+6. The bridge routes the conversation to a Chatwoot team or support agent.
+7. If enabled, it stores redacted vector memory in Qdrant and relation memory in FalkorDB.
+8. When a case is resolved, it stores the resolution transcript as memory for future answers.
 
 Public replies are disabled by default. Use `CHATWOOT_AI_PUBLIC_REPLIES=true` only after QA.
 
@@ -43,6 +44,32 @@ SUPPORT_AI_PROVIDER=mindbliss
 VP_SUPPORT_AI_URL=http://mindbrain-vp-support:9096
 VP_SUPPORT_AI_TOKEN=...
 ```
+
+## Automatic support routing
+
+The bridge includes a deterministic router for assigning conversations to the
+right support team or responsible agent. It does not ask the LLM to choose the
+agent; the model only classifies and answers, while routing follows explicit
+rules.
+
+```env
+SUPPORT_ROUTING_ENABLED=true
+SUPPORT_ROUTING_RULES=[{"name":"auth","categories":["auth"],"priorities":["high","urgent"],"team_id":12,"agent_emails":["soporte-auth@example.com"]},{"name":"payments","categories":["payments"],"team_id":13,"agent_emails":["pagos@example.com"]}]
+SUPPORT_ROUTING_DEFAULT_TEAM_ID=10
+SUPPORT_ROUTING_DEFAULT_ASSIGNEE_EMAIL=
+SUPPORT_ROUTING_PRIORITY_TEAM_MAP=urgent:10,high:11
+SUPPORT_ROUTING_STICKY_RETURNING_AGENT=true
+SUPPORT_ROUTING_PREFER_AVAILABLE_AGENTS=true
+SUPPORT_ROUTING_ALLOWED_AGENT_ROLES=agent
+```
+
+Rules can match `categories`, `priorities`, `labels` and `keywords`. The first
+highest-score match wins. If the conversation already has a human assignee and
+`SUPPORT_ROUTING_STICKY_RETURNING_AGENT=true`, the router keeps that agent so a
+returning customer reaches the same responsible person. If an escalation is
+required, routing metadata sets `support_escalated=true` after assignment, so
+Chatwoot emails the assigned agent and team members through the existing
+escalation notification service.
 
 ## Local test
 
