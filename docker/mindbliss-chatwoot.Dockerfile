@@ -28,9 +28,15 @@ COPY app/javascript/dashboard/i18n/locale/en/chatlist.json /app/app/javascript/d
 COPY app/javascript/dashboard/i18n/locale/en/settings.json /app/app/javascript/dashboard/i18n/locale/en/settings.json
 COPY app/javascript/dashboard/i18n/locale/es/chatlist.json /app/app/javascript/dashboard/i18n/locale/es/chatlist.json
 COPY app/javascript/dashboard/i18n/locale/es/settings.json /app/app/javascript/dashboard/i18n/locale/es/settings.json
+COPY app/javascript/entrypoints/sdk.js /app/app/javascript/entrypoints/sdk.js
+COPY app/javascript/sdk/IFrameHelper.js /app/app/javascript/sdk/IFrameHelper.js
+COPY app/javascript/sdk/bubbleHelpers.js /app/app/javascript/sdk/bubbleHelpers.js
+COPY app/javascript/sdk/sdk.css /app/app/javascript/sdk/sdk.css
 COPY app/javascript/widget/api/endPoints.js /app/app/javascript/widget/api/endPoints.js
+COPY app/javascript/widget/App.vue /app/app/javascript/widget/App.vue
 COPY app/javascript/widget/i18n/locale/en.json /app/app/javascript/widget/i18n/locale/en.json
 COPY app/javascript/widget/i18n/locale/es.json /app/app/javascript/widget/i18n/locale/es.json
+COPY app/javascript/widget/store/modules/appConfig.js /app/app/javascript/widget/store/modules/appConfig.js
 COPY app/controllers/api/v1/accounts/agents_controller.rb /app/app/controllers/api/v1/accounts/agents_controller.rb
 COPY app/controllers/api/v1/accounts/captain/preferences_controller.rb /app/app/controllers/api/v1/accounts/captain/preferences_controller.rb
 COPY app/controllers/concerns/conversation_custom_attributes_concern.rb /app/app/controllers/concerns/conversation_custom_attributes_concern.rb
