@@ -25,6 +25,7 @@ CAPTAIN_FEATURES=(
   captain_integration_v2
   captain_tasks
   custom_tools
+  auto_resolve_conversations
 )
 SUPPORT_AGENT_SOURCE_DIR="$SOURCE_DIR/mindbliss-support-agent"
 SUPPORT_AGENT_DEPLOY_DIR="$DEPLOY_DIR/mindbliss-support-agent"
@@ -104,6 +105,13 @@ echo "Provisioning Mindbliss persuasive support canned responses"
   cd "$COMPOSE_PROJECT_DIR"
   docker compose "${COMPOSE_FILES[@]}" run --rm rails bundle exec rails runner \
     "Mindbliss::SupportCannedResponses.provision_all!"
+)
+
+echo "Configuring Mindbliss 10-minute inactivity auto resolution"
+(
+  cd "$COMPOSE_PROJECT_DIR"
+  docker compose "${COMPOSE_FILES[@]}" run --rm rails bundle exec rails runner \
+    "Mindbliss::InactivityAutoResolve.provision_all!"
 )
 
 echo "Restarting Chatwoot Rails and Sidekiq with $IMAGE_TAG"
