@@ -64,6 +64,31 @@ test('configures ticket operations from dedicated env without making token boot-
   assert.equal(cfg.tickets.token, 'ticket-token');
 });
 
+test('configures automatic support routing', () => {
+  const cfg = readConfig({
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',
+    CHATWOOT_API_ACCESS_TOKEN: 'chatwoot-token',
+    CHATWOOT_BASE_URL: 'http://rails:3000',
+    VP_SUPPORT_AI_URL: 'http://vp-support:9096',
+    VP_SUPPORT_AI_TOKEN: 'support-token',
+    MEMORY_ENABLED: 'false',
+    SUPPORT_ROUTING_ENABLED: 'true',
+    SUPPORT_ROUTING_RULES:
+      '[{"name":"auth","categories":["auth"],"team_id":12,"agent_emails":["agent@example.com"]}]',
+    SUPPORT_ROUTING_DEFAULT_TEAM_ID: '10',
+    SUPPORT_ROUTING_DEFAULT_ASSIGNEE_EMAIL: 'fallback@example.com',
+    SUPPORT_ROUTING_PRIORITY_TEAM_MAP: 'urgent:9,high:8',
+    SUPPORT_ROUTING_ALLOWED_AGENT_ROLES: 'agent',
+  });
+
+  assert.equal(cfg.routing.enabled, true);
+  assert.equal(cfg.routing.rules.includes('"auth"'), true);
+  assert.equal(cfg.routing.defaultTeamId, 10);
+  assert.equal(cfg.routing.defaultAssigneeEmail, 'fallback@example.com');
+  assert.deepEqual(cfg.routing.priorityTeamMap, { urgent: 9, high: 8 });
+  assert.deepEqual(cfg.routing.allowedAgentRoles, ['agent']);
+});
+
 test('configures OpenRouter support brain without legacy VP service', () => {
   const cfg = readConfig({
     CHATWOOT_WEBHOOK_SECRET: 'webhook-secret',

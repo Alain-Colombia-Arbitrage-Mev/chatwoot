@@ -6,6 +6,7 @@ import {
   parseKnowledgeCommand,
 } from './knowledgeCommand.js';
 import { MemoryStore } from './memoryStore.js';
+import { buildRoutingNote, ConversationRouter } from './conversationRouter.js';
 import {
   buildResolutionMemoryChunks,
   fetchConversationMessages,
@@ -29,6 +30,16 @@ export class WebhookProcessor {
     this.chatwoot = deps.chatwoot || new ChatwootClient(config.chatwoot);
     this.supportBrain = deps.supportBrain || new SupportBrain(config.support);
     this.memory = deps.memory || new MemoryStore(config.memory);
+    this.router =
+      deps.router ||
+      new ConversationRouter(
+        {
+          ...(config.routing || {}),
+          priorityTeamMap:
+            config.routing?.priorityTeamMap || config.chatwoot?.teamMap || {},
+        },
+        { chatwoot: this.chatwoot }
+      );
   }
 
   async process(payload, deliveryId = '') {
@@ -63,14 +74,7 @@ export class WebhookProcessor {
       prompt,
       payload.sender?.email
     );
-    const note = buildNote({
-      supportResult,
-      triage,
-      relatedMemories,
-      idempotencyKey,
-    });
     const labels = this.labelsFor(triage, supportResult);
-    const teamId = this.config.chatwoot.teamMap[triage.priority] || null;
 
     await this.chatwoot
       .addLabels(accountId, conversationId, labels)
@@ -83,11 +87,21 @@ export class WebhookProcessor {
         .openConversation(accountId, conversationId)
         .catch(() => null);
     }
-    if (teamId) {
-      await this.chatwoot
-        .assignTeam(accountId, conversationId, teamId)
-        .catch(() => null);
-    }
+    const routing = await this.routeConversation({
+      accountId,
+      conversationId,
+      payload,
+      triage,
+      supportResult,
+      labels,
+    });
+    const note = buildNote({
+      supportResult,
+      triage,
+      relatedMemories,
+      idempotencyKey,
+      routingNote: routing ? buildRoutingNote(routing) : '',
+    });
 
     const shouldPublicReply =
       this.config.chatwoot.publicReplies && supportResult.escalate !== true;
@@ -111,7 +125,52 @@ export class WebhookProcessor {
         ? 'public_reply_created'
         : 'private_note_created',
       triage,
+      routing,
     };
+  }
+
+  async routeConversation({
+    accountId,
+    conversationId,
+    payload,
+    triage,
+    supportResult,
+    labels,
+  }) {
+    if (!this.router) return null;
+    const routing = await this.router
+      .route({
+        accountId,
+        conversationId,
+        payload,
+        triage,
+        supportResult,
+        labels,
+      })
+      .catch(error => {
+        console.warn(JSON.stringify({
+          level: 'warn',
+          msg: 'support_route_failed',
+          conversationId,
+          error: error.message,
+        }));
+        return null;
+      });
+
+    if (routing) {
+      await this.router
+        .apply(accountId, conversationId, routing, { triage, supportResult })
+        .catch(error => {
+          console.warn(JSON.stringify({
+            level: 'warn',
+            msg: 'support_route_apply_failed',
+            conversationId,
+            error: error.message,
+          }));
+        });
+    }
+
+    return routing;
   }
 
   async processResolvedConversation(payload, deliveryId = '') {

@@ -189,6 +189,7 @@ export function buildNote({
   triage,
   relatedMemories,
   idempotencyKey,
+  routingNote = '',
 }) {
   const answer = cleanText(supportResult.answer || '');
   const escalation = supportResult.escalate ? 'si' : 'no';
@@ -215,6 +216,7 @@ export function buildNote({
     `Prioridad: ${triage.priority}`,
     `Categoria: ${triage.category}`,
     `Escalar a humano: ${escalation}`,
+    routingNote,
     '',
     answer || 'No se generó respuesta automática; revisar manualmente.',
     '',

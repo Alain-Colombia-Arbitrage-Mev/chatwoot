@@ -25,6 +25,23 @@ test('creates private note with labels and memory for support messages', async (
       sources: [],
     }),
   };
+  const router = {
+    route: async (...args) => {
+      calls.push(['route', ...args]);
+      return {
+        enabled: true,
+        status: 'routed',
+        strategy: 'routing_rule',
+        ruleName: 'auth-high',
+        reason: 'matched_rule:auth-high',
+        teamId: 8,
+        assigneeId: 9,
+        assigneeEmail: 'agent@example.com',
+        confidence: 0.75,
+      };
+    },
+    apply: async (...args) => calls.push(['routeApply', ...args]),
+  };
   const processor = new WebhookProcessor(
     {
       chatwoot: {
@@ -34,7 +51,7 @@ test('creates private note with labels and memory for support messages', async (
         labelPrefix: 'mb_ai',
       },
     },
-    { chatwoot, memory, supportBrain }
+    { chatwoot, memory, supportBrain, router }
   );
 
   const result = await processor.process(
@@ -67,6 +84,13 @@ test('creates private note with labels and memory for support messages', async (
     calls.some(call => call[0] === 'store'),
     true
   );
+  assert.equal(result.routing.teamId, 8);
+  assert.equal(
+    calls.some(call => call[0] === 'routeApply'),
+    true
+  );
+  const messageCall = calls.find(call => call[0] === 'message');
+  assert.match(messageCall[3].content, /Routing automatico/);
 });
 
 test('stores private kb command as account knowledge', async () => {
