@@ -5,6 +5,8 @@ const STATUSES = new Set(['all', 'open', 'resolved', 'pending', 'snoozed']);
 const CREATE_STATUSES = new Set(['open', 'resolved', 'pending', 'snoozed']);
 const ASSIGNEE_TYPES = new Set(['me', 'unassigned', 'all', 'assigned']);
 const PRIORITIES = new Set(['normal', 'low', 'medium', 'high', 'urgent']);
+const RESOLUTION_REVIEW_SOURCE = 'mindbliss_ticket_manager';
+const RESOLUTION_REASON_LIMIT = 500;
 
 export class ValidationError extends Error {
   constructor(code, message = code) {
@@ -94,6 +96,11 @@ export class TicketManager {
       labels: input.labels
     });
     const conversation = await this.chatwoot.closeConversation(input.accountId, conversationId);
+    await this.applyResolutionReview(input.accountId, conversationId, {
+      complete: true,
+      ended: true,
+      reason: input.note || 'Ticket closed'
+    });
     return {
       status: 'ticket_closed',
       ticket: compactConversation({ ...conversation, id: conversationId, status: conversation?.status || 'resolved' })
@@ -119,6 +126,11 @@ export class TicketManager {
       priority: input.priority,
       category: input.category,
       labels: input.labels
+    });
+    await this.applyResolutionReview(input.accountId, conversationId, {
+      complete: false,
+      ended: false,
+      reason: input.note || 'Ticket escalated to a support agent'
     });
     if (input.note || input.assigneeEmail) {
       const emailLine = input.assigneeEmail ? `Responsable: ${input.assigneeEmail}` : '';
@@ -194,6 +206,37 @@ export class TicketManager {
     ].filter(Boolean);
     await this.chatwoot.addLabels(accountId, conversationId, nextLabels).catch(() => null);
   }
+
+  async applyResolutionReview(accountId, conversationId, { complete, ended, reason }) {
+    if (!this.chatwoot.updateConversationCustomAttributes) return null;
+
+    return this.chatwoot.updateConversationCustomAttributes(
+      accountId,
+      conversationId,
+      resolutionReviewAttributes({ complete, ended, reason })
+    ).catch(error => {
+      console.warn(JSON.stringify({
+        level: 'warn',
+        msg: 'ticket_resolution_review_failed',
+        conversationId,
+        error: error.message
+      }));
+      return null;
+    });
+  }
+}
+
+function resolutionReviewAttributes({ complete, ended, reason }) {
+  const reviewedAt = new Date().toISOString();
+  return {
+    support_resolution_reviewed: true,
+    support_resolution_reviewed_at: reviewedAt,
+    support_resolution_review_source: RESOLUTION_REVIEW_SOURCE,
+    support_resolution_complete: Boolean(complete),
+    support_conversation_ended: Boolean(ended),
+    support_conversation_ended_at: ended ? reviewedAt : null,
+    support_resolution_reason: cleanText(reason).slice(0, RESOLUTION_REASON_LIMIT)
+  };
 }
 
 export function normalizeListOptions(raw = {}, cfg = {}) {

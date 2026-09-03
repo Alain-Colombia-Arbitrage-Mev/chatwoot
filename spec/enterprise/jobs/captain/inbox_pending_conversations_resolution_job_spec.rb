@@ -241,6 +241,21 @@ RSpec.describe Captain::InboxPendingConversationsResolutionJob, type: :job do
       )
       expect(inference_event).to be_present
     end
+
+    it 'marks the conversation as reviewed, resolutive and ended' do
+      described_class.perform_now(inbox)
+
+      attributes = resolvable_pending_conversation.reload.custom_attributes
+      expect(attributes).to include(
+        'support_resolution_reviewed' => true,
+        'support_resolution_review_source' => 'captain_inactivity_evaluation',
+        'support_resolution_complete' => true,
+        'support_conversation_ended' => true,
+        'support_resolution_reason' => 'Customer question was answered'
+      )
+      expect(attributes['support_resolution_reviewed_at']).to be_present
+      expect(attributes['support_conversation_ended_at']).to be_present
+    end
   end
 
   context 'when LLM evaluation returns incomplete' do
@@ -348,6 +363,21 @@ RSpec.describe Captain::InboxPendingConversationsResolutionJob, type: :job do
       )
       expect(inference_event).to be_present
     end
+
+    it 'marks the conversation as reviewed but not resolutive or ended' do
+      described_class.perform_now(inbox)
+
+      attributes = resolvable_pending_conversation.reload.custom_attributes
+      expect(attributes).to include(
+        'support_resolution_reviewed' => true,
+        'support_resolution_review_source' => 'captain_inactivity_evaluation',
+        'support_resolution_complete' => false,
+        'support_conversation_ended' => false,
+        'support_conversation_ended_at' => nil,
+        'support_resolution_reason' => handoff_reason
+      )
+      expect(attributes['support_resolution_reviewed_at']).to be_present
+    end
   end
 
   context 'when handoff occurs outside business hours' do
@@ -425,7 +455,7 @@ RSpec.describe Captain::InboxPendingConversationsResolutionJob, type: :job do
       allow(conversation).to receive(:resolved!).and_raise(StandardError, 'transition failed')
 
       expect do
-        job.send(:resolve_conversation, conversation, inbox, 'Customer question was answered')
+        job.send(:resolve_conversation, conversation, inbox, { complete: true, reason: 'Customer question was answered' })
       end.to raise_error(StandardError, 'transition failed')
 
       expect(conversation.reload).to be_pending
@@ -438,7 +468,7 @@ RSpec.describe Captain::InboxPendingConversationsResolutionJob, type: :job do
       allow(conversation).to receive(:bot_handoff!).and_raise(StandardError, 'transition failed')
 
       expect do
-        job.send(:handoff_conversation, conversation, 'Customer needs an agent')
+        job.send(:handoff_conversation, conversation, { complete: false, reason: 'Customer needs an agent' })
       end.to raise_error(StandardError, 'transition failed')
 
       expect(conversation.reload).to be_pending
@@ -452,7 +482,7 @@ RSpec.describe Captain::InboxPendingConversationsResolutionJob, type: :job do
         expect(ActiveRecord::Base.connection.open_transactions).to eq(open_transactions_before_handoff)
       end
 
-      job.send(:handoff_conversation, conversation, 'Customer needs an agent')
+      job.send(:handoff_conversation, conversation, { complete: false, reason: 'Customer needs an agent' })
     end
   end
 

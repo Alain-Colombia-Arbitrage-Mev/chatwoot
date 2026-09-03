@@ -47,6 +47,7 @@
         "ACTIVE": "Activos",
         "PENDING": "Pendientes",
         "RESOLVED": "Resueltos",
+        "NOT_RESOLUTIVE": "No resolutivos",
         "ESCALATED": "Escalados",
         "UNASSIGNED": "Sin responsable",
         "ALL": "Todos"
@@ -57,6 +58,7 @@
         "OPEN": "Abiertos",
         "PENDING": "Pendientes",
         "RESOLVED": "Resueltos",
+        "NOT_RESOLUTIVE": "No resol.",
         "ESCALATED": "Escalados",
         "UNASSIGNED": "Sin resp.",
         "URGENT": "Urgentes",
@@ -67,9 +69,18 @@
         "STATUS": "Estado",
         "PRIORITY": "Prioridad",
         "ESCALATION": "Escalamiento",
+        "RESOLUTIVE": "Resolutiva",
+        "ENDED": "Terminó",
         "RESPONSIBLE": "Responsable",
         "TEAM": "Equipo",
         "UPDATED": "Actualizado"
+      },
+      "REVIEW": {
+        "UNREVIEWED": "Sin revisar",
+        "RESOLUTIVE": "Resolutiva",
+        "NOT_RESOLUTIVE": "No resolutiva",
+        "ENDED": "Terminó",
+        "NOT_ENDED": "No terminó"
       }
     },
     "FILTER_ALL": "Todos",

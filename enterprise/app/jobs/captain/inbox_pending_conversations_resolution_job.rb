@@ -42,9 +42,9 @@ class Captain::InboxPendingConversationsResolutionJob < ApplicationJob
       next unless still_resolvable_after_evaluation?(conversation)
 
       if evaluation[:complete]
-        resolve_conversation(conversation, inbox, evaluation[:reason])
+        resolve_conversation(conversation, inbox, evaluation)
       else
-        handoff_conversation(conversation, evaluation[:reason])
+        handoff_conversation(conversation, evaluation)
       end
     end
   end
@@ -93,9 +93,11 @@ class Captain::InboxPendingConversationsResolutionJob < ApplicationJob
     nil
   end
 
-  def resolve_conversation(conversation, inbox, reason)
+  def resolve_conversation(conversation, inbox, evaluation)
+    reason = evaluation[:reason]
     resolved = with_inference_activity_context(conversation, CAPTAIN_INFERENCE_RESOLVE_ACTIVITY_REASON) do
       perform_locked_transition(conversation) do
+        Captain::ConversationResolutionReview.apply!(conversation, evaluation)
         conversation.resolved!
         create_private_note(conversation, "Auto-resolved: #{reason}")
         create_resolution_message(conversation, inbox)
@@ -115,9 +117,11 @@ class Captain::InboxPendingConversationsResolutionJob < ApplicationJob
     )
   end
 
-  def handoff_conversation(conversation, reason)
+  def handoff_conversation(conversation, evaluation)
+    reason = evaluation[:reason]
     handed_off = with_inference_activity_context(conversation, CAPTAIN_INFERENCE_HANDOFF_ACTIVITY_REASON) do
       perform_locked_transition(conversation) do
+        Captain::ConversationResolutionReview.apply!(conversation, evaluation)
         conversation.bot_handoff!(dispatch_event: false)
         create_private_note(conversation, "Auto-handoff: #{reason}")
         create_handoff_message(conversation)
@@ -126,6 +130,13 @@ class Captain::InboxPendingConversationsResolutionJob < ApplicationJob
     return unless handed_off
 
     conversation.dispatch_bot_handoff_event
+    record_inference_handoff(conversation)
+    send_out_of_office_message_if_applicable(conversation.reload)
+  rescue ActiveRecord::RecordNotFound
+    nil
+  end
+
+  def record_inference_handoff(conversation)
     Captain::ConversationEvents.handed_off(
       conversation: conversation,
       assistant: captain_assistant,
@@ -133,9 +144,6 @@ class Captain::InboxPendingConversationsResolutionJob < ApplicationJob
       reason_category: :pending_clarification,
       at: Time.current
     )
-    send_out_of_office_message_if_applicable(conversation.reload)
-  rescue ActiveRecord::RecordNotFound
-    nil
   end
 
   def perform_locked_transition(conversation)

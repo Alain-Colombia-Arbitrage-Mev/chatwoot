@@ -77,7 +77,8 @@ test('closes a ticket with resolved status and private note', async () => {
     closeConversation: async (...args) => {
       calls.push(['close', ...args]);
       return { id: 77, status: 'resolved' };
-    }
+    },
+    updateConversationCustomAttributes: async (...args) => calls.push(['attrs', ...args])
   };
   const manager = new TicketManager({
     tickets: { accountId: 2, labelPrefix: 'mb_ticket' },
@@ -91,6 +92,39 @@ test('closes a ticket with resolved status and private note', async () => {
   assert.equal(result.ticket.status, 'resolved');
   assert.equal(calls.some(call => call[0] === 'message' && call[3].privateMessage === true), true);
   assert.equal(calls.some(call => call[0] === 'close'), true);
+  const attrsCall = calls.find(call => call[0] === 'attrs');
+  assert.equal(attrsCall[3].support_resolution_reviewed, true);
+  assert.equal(attrsCall[3].support_resolution_complete, true);
+  assert.equal(attrsCall[3].support_conversation_ended, true);
+});
+
+test('escalates a ticket and marks it not resolved or ended', async () => {
+  const calls = [];
+  const chatwoot = {
+    listAgents: async () => [{ id: 9, email: 'agent@example.com', name: 'Agent' }],
+    openConversation: async (...args) => calls.push(['open', ...args]),
+    setPriority: async (...args) => calls.push(['priority', ...args]),
+    assignConversation: async (...args) => calls.push(['assign', ...args]),
+    addLabels: async (...args) => calls.push(['labels', ...args]),
+    createMessage: async (...args) => calls.push(['message', ...args]),
+    updateConversationCustomAttributes: async (...args) => calls.push(['attrs', ...args])
+  };
+  const manager = new TicketManager({
+    tickets: { accountId: 2, labelPrefix: 'mb_ticket' },
+    chatwoot: {}
+  }, { chatwoot });
+
+  const result = await manager.escalate(77, {
+    assignee_email: 'agent@example.com',
+    note: 'Needs billing validation'
+  });
+
+  assert.equal(result.status, 'ticket_escalated');
+  assert.equal(calls.some(call => call[0] === 'assign' && call[3].assigneeId === 9), true);
+  const attrsCall = calls.find(call => call[0] === 'attrs');
+  assert.equal(attrsCall[3].support_resolution_reviewed, true);
+  assert.equal(attrsCall[3].support_resolution_complete, false);
+  assert.equal(attrsCall[3].support_conversation_ended, false);
 });
 
 test('escalation rejects unknown assignee email', async () => {

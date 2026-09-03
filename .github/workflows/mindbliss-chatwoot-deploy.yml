@@ -25,6 +25,8 @@ on:
       - 'app/javascript/widget/**'
       - 'app/models/channel/web_widget.rb'
       - 'app/services/mindbliss/**'
+      - 'enterprise/app/jobs/captain/**'
+      - 'enterprise/app/services/captain/**'
       - 'deployment/mindbliss_chatwoot_upgrade.sh'
       - 'deployment/mindbliss_support_agent_setup.rb'
       - 'docker/mindbliss-chatwoot.Dockerfile'
