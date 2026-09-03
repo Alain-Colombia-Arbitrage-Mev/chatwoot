@@ -20,6 +20,8 @@ on:
       - develop
     paths:
       - 'app/javascript/dashboard/**'
+      - 'app/javascript/entrypoints/sdk.js'
+      - 'app/javascript/sdk/**'
       - 'app/javascript/widget/**'
       - 'app/models/channel/web_widget.rb'
       - 'app/services/mindbliss/**'
