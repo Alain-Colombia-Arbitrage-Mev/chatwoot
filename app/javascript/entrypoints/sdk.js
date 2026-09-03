@@ -18,6 +18,16 @@ import {
 import { setCookieWithDomain } from '../sdk/cookieHelpers';
 import { SDK_SET_BUBBLE_VISIBILITY } from 'shared/constants/sharedFrameEvents';
 
+const DEFAULT_BUBBLE_NUDGE_DELAY = 1200;
+const DEFAULT_BUBBLE_NUDGE_DISMISS_AFTER = 12000;
+
+const getNonNegativeNumber = (value, fallback) => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue >= 0
+    ? numberValue
+    : fallback;
+};
+
 const runSDK = ({ baseUrl, websiteToken }) => {
   if (window.$chatwoot) {
     return;
@@ -50,6 +60,7 @@ const runSDK = ({ baseUrl, websiteToken }) => {
   const chatwootSettings = window.chatwootSettings || {};
   let locale = chatwootSettings.locale;
   let baseDomain = chatwootSettings.baseDomain;
+  const hasConversationCookie = !!Cookies.get('cw_conversation');
 
   if (chatwootSettings.useBrowserLanguage) {
     locale = window.navigator.language.replace('-', '_');
@@ -67,6 +78,17 @@ const runSDK = ({ baseUrl, websiteToken }) => {
     useBrowserLanguage: chatwootSettings.useBrowserLanguage || false,
     type: getBubbleView(chatwootSettings.type),
     launcherTitle: chatwootSettings.launcherTitle || '',
+    isReturningVisitor:
+      chatwootSettings.isReturningVisitor ?? hasConversationCookie,
+    showBubbleNudge: chatwootSettings.showBubbleNudge ?? true,
+    bubbleNudgeDelay: getNonNegativeNumber(
+      chatwootSettings.bubbleNudgeDelay,
+      DEFAULT_BUBBLE_NUDGE_DELAY
+    ),
+    bubbleNudgeDismissAfter: getNonNegativeNumber(
+      chatwootSettings.bubbleNudgeDismissAfter,
+      DEFAULT_BUBBLE_NUDGE_DISMISS_AFTER
+    ),
     showPopoutButton: chatwootSettings.showPopoutButton || false,
     showUnreadMessagesDialog: chatwootSettings.showUnreadMessagesDialog ?? true,
     widgetStyle: getWidgetStyle(chatwootSettings.widgetStyle) || 'standard',

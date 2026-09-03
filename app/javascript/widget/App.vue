@@ -52,6 +52,7 @@ export default {
       isWidgetOpen: 'appConfig/getIsWidgetOpen',
       messageCount: 'conversation/getMessageCount',
       unreadMessageCount: 'conversation/getUnreadMessageCount',
+      isReturningVisitor: 'appConfig/getIsReturningVisitor',
       isWidgetStyleFlat: 'appConfig/isWidgetStyleFlat',
       showUnreadMessagesDialog: 'appConfig/getShowUnreadMessagesDialog',
     }),
@@ -139,9 +140,23 @@ export default {
       container.scrollTop = container.scrollHeight;
     },
     setBubbleLabel() {
+      const label = this.isReturningVisitor
+        ? this.$t('BUBBLE.RETURNING_LABEL')
+        : this.$t('BUBBLE.LABEL');
+      const nudgeTitle = this.isReturningVisitor
+        ? this.$t('BUBBLE.RETURNING_TITLE')
+        : this.$t('BUBBLE.HELP_TITLE');
+      const nudgeBody = this.isReturningVisitor
+        ? this.$t('BUBBLE.RETURNING_BODY')
+        : this.$t('BUBBLE.HELP_BODY');
+
       IFrameHelper.sendMessage({
         event: 'setBubbleLabel',
-        label: this.$t('BUBBLE.LABEL'),
+        label,
+        nudge: {
+          title: nudgeTitle,
+          body: nudgeBody,
+        },
       });
     },
     setIframeHeight(isFixedHeight) {
@@ -276,10 +291,10 @@ export default {
         const message = IFrameHelper.getMessage(e);
         if (message.event === 'config-set') {
           this.setLocale(message.locale);
+          this.setAppConfig(message);
           this.setBubbleLabel();
           this.fetchOldConversations().then(() => this.setUnreadView());
           this.fetchAvailableAgents(websiteToken);
-          this.setAppConfig(message);
           this.$store.dispatch('contacts/get');
           this.setCampaignReadData(message.campaignsSnoozedTill);
         } else if (message.event === 'widget-visible') {

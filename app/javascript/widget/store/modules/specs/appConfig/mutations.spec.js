@@ -40,4 +40,15 @@ describe('#mutations', () => {
       expect(state.isUpdatingRoute).toEqual(true);
     });
   });
+
+  describe('#SET_WIDGET_APP_CONFIG', () => {
+    it('sets returning visitor state properly', () => {
+      const state = { isReturningVisitor: false };
+      mutations.SET_WIDGET_APP_CONFIG(state, {
+        isReturningVisitor: true,
+      });
+
+      expect(state.isReturningVisitor).toEqual(true);
+    });
+  });
 });

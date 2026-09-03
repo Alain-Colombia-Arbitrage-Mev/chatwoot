@@ -17,12 +17,102 @@ export const bubbleHolder = document.createElement('div');
 export const chatBubble = document.createElement('button');
 export const closeBubble = document.createElement('button');
 export const notificationBubble = document.createElement('span');
+export const bubbleNudge = document.createElement('button');
+
+let bubbleNudgeTimer;
+let bubbleNudgeDismissTimer;
+
+const clearBubbleNudgeTimers = () => {
+  window.clearTimeout(bubbleNudgeTimer);
+  window.clearTimeout(bubbleNudgeDismissTimer);
+};
+
+const setBubbleButtonLabel = label => {
+  if (!label) return;
+
+  chatBubble.title = label;
+  chatBubble.setAttribute('aria-label', label);
+};
+
+export const prepareBubbleNudge = () => {
+  bubbleNudge.type = 'button';
+  bubbleNudge.className = `woot-widget-bubble-nudge woot-elements--${window.$chatwoot.position} woot--hide`;
+};
 
 export const setBubbleText = bubbleText => {
   if (isExpandedView(window.$chatwoot.type)) {
     const textNode = document.getElementById('woot-widget--expanded__text');
     textNode.innerText = bubbleText;
   }
+};
+
+export const hideBubbleNudge = () => {
+  clearBubbleNudgeTimers();
+  addClasses(bubbleNudge, 'woot--hide');
+};
+
+export const showBubbleNudge = () => {
+  if (
+    window.$chatwoot.hideMessageBubble ||
+    !window.$chatwoot.showBubbleNudge ||
+    window.$chatwoot.isOpen ||
+    isExpandedView(window.$chatwoot.type)
+  ) {
+    return;
+  }
+
+  clearBubbleNudgeTimers();
+  bubbleNudgeTimer = window.setTimeout(
+    () => {
+      removeClasses(bubbleNudge, 'woot--hide');
+
+      const dismissAfter = Number(window.$chatwoot.bubbleNudgeDismissAfter);
+      if (dismissAfter > 0) {
+        bubbleNudgeDismissTimer = window.setTimeout(
+          hideBubbleNudge,
+          dismissAfter
+        );
+      }
+    },
+    Number(window.$chatwoot.bubbleNudgeDelay) || 0
+  );
+};
+
+export const setBubbleNudge = ({
+  title = '',
+  body: message = '',
+  label = '',
+} = {}) => {
+  setBubbleButtonLabel(label);
+
+  if (!title && !message) {
+    return;
+  }
+
+  prepareBubbleNudge();
+  bubbleNudge.setAttribute('aria-label', label || title || message);
+  bubbleNudge.title = label || title || message;
+  bubbleNudge.innerHTML = '';
+
+  if (title) {
+    const titleEl = document.createElement('span');
+    titleEl.className = 'woot-widget-bubble-nudge__title';
+    titleEl.innerText = title;
+    bubbleNudge.appendChild(titleEl);
+  }
+
+  if (message) {
+    const bodyEl = document.createElement('span');
+    bodyEl.className = 'woot-widget-bubble-nudge__body';
+    bodyEl.innerText = message;
+    bubbleNudge.appendChild(bodyEl);
+  }
+
+  if (bubbleHolder.childNodes.length && !bubbleNudge.parentNode) {
+    bubbleHolder.insertBefore(bubbleNudge, chatBubble);
+  }
+
+  showBubbleNudge();
 };
 
 export const createBubbleIcon = ({ className, path, target }) => {
@@ -58,6 +148,7 @@ export const createBubbleIcon = ({ className, path, target }) => {
 
   target.className = bubbleClassName;
   target.title = 'Open chat window';
+  target.setAttribute('aria-label', 'Open chat window');
   return target;
 };
 
@@ -89,6 +180,8 @@ export const onBubbleClick = (props = {}) => {
 
   const newIsOpen = toggleValue === undefined ? !isOpen : toggleValue;
   window.$chatwoot.isOpen = newIsOpen;
+
+  hideBubbleNudge();
 
   toggleClass(chatBubble, 'woot--hide');
   toggleClass(closeBubble, 'woot--hide');
