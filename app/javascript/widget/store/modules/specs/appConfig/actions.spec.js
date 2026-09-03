@@ -32,6 +32,16 @@ describe('#actions', () => {
     });
   });
 
+  describe('#setAppConfig', () => {
+    it('includes returning visitor state', () => {
+      actions.setAppConfig({ commit }, { isReturningVisitor: true });
+      expect(commit).toHaveBeenCalledWith(
+        'SET_WIDGET_APP_CONFIG',
+        expect.objectContaining({ isReturningVisitor: true })
+      );
+    });
+  });
+
   describe('#setRouteTransitionState', () => {
     it('creates actions properly', () => {
       actions.setRouteTransitionState({ commit }, false);

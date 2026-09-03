@@ -19,6 +19,12 @@ describe('#getters', () => {
       expect(getters.getShowUnreadMessagesDialog(state)).toEqual(true);
     });
   });
+  describe('#getIsReturningVisitor', () => {
+    it('returns correct value', () => {
+      const state = { isReturningVisitor: true };
+      expect(getters.getIsReturningVisitor(state)).toEqual(true);
+    });
+  });
   describe('#getAvailableMessage', () => {
     it('returns correct value', () => {
       const state = { availableMessage: 'We reply quickly' };

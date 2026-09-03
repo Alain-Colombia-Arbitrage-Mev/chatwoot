@@ -13,10 +13,13 @@ import {
   bubbleSVG,
   chatBubble,
   closeBubble,
+  bubbleNudge,
   bubbleHolder,
   onClickChatBubble,
   onBubbleClick,
   setBubbleText,
+  setBubbleNudge,
+  prepareBubbleNudge,
   addUnreadClass,
   removeUnreadClass,
 } from './bubbleHelpers';
@@ -172,6 +175,7 @@ export const IFrameHelper = {
         enableFileUpload: window.$chatwoot.enableFileUpload,
         enableEmojiPicker: window.$chatwoot.enableEmojiPicker,
         enableEndConversation: window.$chatwoot.enableEndConversation,
+        isReturningVisitor: window.$chatwoot.isReturningVisitor,
       });
       IFrameHelper.onLoad({
         widgetColor: message.config.channelConfig.widgetColor,
@@ -203,7 +207,12 @@ export const IFrameHelper = {
       dispatchWindowEvent({ eventName, data });
     },
     setBubbleLabel(message) {
-      setBubbleText(window.$chatwoot.launcherTitle || message.label);
+      const label = window.$chatwoot.launcherTitle || message.label;
+      setBubbleText(label);
+      setBubbleNudge({
+        ...message.nudge,
+        label,
+      });
     },
 
     setAuthCookie({ data: { widgetAuthToken } }) {
@@ -331,6 +340,10 @@ export const IFrameHelper = {
     closeBubble.style.background = widgetColor;
 
     bubbleHolder.appendChild(chatIcon);
+    if (!bubbleNudge.parentNode) {
+      prepareBubbleNudge();
+      bubbleHolder.insertBefore(bubbleNudge, chatIcon);
+    }
     bubbleHolder.appendChild(closeBubble);
     onClickChatBubble();
   },

@@ -14,6 +14,7 @@ const state = {
   showUnreadMessagesDialog: true,
   isWebWidgetTriggered: false,
   isWidgetOpen: false,
+  isReturningVisitor: false,
   position: 'right',
   referrerHost: '',
   showPopoutButton: false,
@@ -40,6 +41,7 @@ export const getters = {
   isWidgetStyleFlat: $state => $state.widgetStyle === 'flat',
   darkMode: $state => $state.darkMode,
   getShowUnreadMessagesDialog: $state => $state.showUnreadMessagesDialog,
+  getIsReturningVisitor: $state => $state.isReturningVisitor,
   getIsUpdatingRoute: _state => _state.isUpdatingRoute,
   getWelcomeHeading: $state => $state.welcomeTitle,
   getWelcomeTagline: $state => $state.welcomeDescription,
@@ -67,6 +69,7 @@ export const actions = {
       enableFileUpload = undefined,
       enableEmojiPicker = true,
       enableEndConversation = true,
+      isReturningVisitor = false,
     }
   ) {
     commit(SET_WIDGET_APP_CONFIG, {
@@ -83,6 +86,7 @@ export const actions = {
       enableFileUpload,
       enableEmojiPicker,
       enableEndConversation,
+      isReturningVisitor,
     });
   },
   toggleWidgetOpen({ commit }, isWidgetOpen) {
@@ -125,6 +129,7 @@ export const mutations = {
     $state.enableFileUpload = data.enableFileUpload;
     $state.enableEmojiPicker = data.enableEmojiPicker;
     $state.enableEndConversation = data.enableEndConversation;
+    $state.isReturningVisitor = data.isReturningVisitor;
   },
   [TOGGLE_WIDGET_OPEN]($state, isWidgetOpen) {
     $state.isWidgetOpen = isWidgetOpen;

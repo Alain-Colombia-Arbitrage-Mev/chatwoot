@@ -55,7 +55,12 @@
     "BOT": "Bot"
   },
   "BUBBLE": {
-    "LABEL": "Chat with us"
+    "LABEL": "Need help?",
+    "HELP_TITLE": "Need help?",
+    "HELP_BODY": "Click the bubble and tell us what you need.",
+    "RETURNING_LABEL": "Welcome back",
+    "RETURNING_TITLE": "Welcome back",
+    "RETURNING_BODY": "Click to continue your case or start a new request."
   },
   "POWERED_BY": "Powered by Chatwoot",
   "EMAIL_PLACEHOLDER": "Please enter your email",

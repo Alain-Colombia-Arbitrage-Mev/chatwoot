@@ -55,7 +55,12 @@
     "BOT": "Bot"
   },
   "BUBBLE": {
-    "LABEL": "Chatea con nosotros"
+    "LABEL": "¿Necesitas ayuda?",
+    "HELP_TITLE": "¿Necesitas ayuda?",
+    "HELP_BODY": "Haz clic en la burbuja y cuéntanos qué necesitas.",
+    "RETURNING_LABEL": "Gracias por volver",
+    "RETURNING_TITLE": "Gracias por volver",
+    "RETURNING_BODY": "Haz clic para continuar tu caso o iniciar una nueva solicitud."
   },
   "POWERED_BY": "Desarrollado por Chatwoot",
   "EMAIL_PLACEHOLDER": "Por favor ingrese su email",
