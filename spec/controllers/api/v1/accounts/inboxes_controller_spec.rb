@@ -480,6 +480,19 @@ RSpec.describe 'Inboxes API', type: :request do
       let(:admin) { create(:user, account: account, role: :administrator) }
       let(:valid_params) { { name: 'test', channel: { type: 'web_widget', website_url: 'test.com' } } }
 
+      it 'rejects a FAQ portal from another company when creating an inbox' do
+        foreign_portal = create(:portal, account: create(:account))
+
+        expect do
+          post "/api/v1/accounts/#{account.id}/inboxes",
+               headers: admin.create_new_auth_token,
+               params: valid_params.merge(portal_id: foreign_portal.id),
+               as: :json
+        end.not_to change(account.inboxes, :count)
+
+        expect(response).to have_http_status(:not_found)
+      end
+
       it 'will not create inbox for agent' do
         agent = create(:user, account: account, role: :agent)
 
@@ -575,6 +588,33 @@ RSpec.describe 'Inboxes API', type: :request do
       let(:admin) { create(:user, account: account, role: :administrator) }
       let!(:portal) { create(:portal, account_id: account.id) }
       let(:valid_params) { { name: 'new test inbox', enable_auto_assignment: false, portal_id: portal.id } }
+
+      it 'rejects a FAQ portal from another company without changing the inbox' do
+        foreign_portal = create(:portal, account: create(:account))
+        inbox.update!(portal: portal)
+
+        patch "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}",
+              headers: admin.create_new_auth_token,
+              params: valid_params.merge(portal_id: foreign_portal.id),
+              as: :json
+
+        expect(response).to have_http_status(:not_found)
+        expect(inbox.reload.portal_id).to eq(portal.id)
+      end
+
+      [nil, 'null'].each do |empty_portal|
+        it "allows clearing the FAQ portal with #{empty_portal.inspect}" do
+          inbox.update!(portal: portal)
+
+          patch "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}",
+                headers: admin.create_new_auth_token,
+                params: valid_params.merge(portal_id: empty_portal),
+                as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(inbox.reload.portal_id).to be_nil
+        end
+      end
 
       it 'will not update inbox for agent' do
         agent = create(:user, account: account, role: :agent)

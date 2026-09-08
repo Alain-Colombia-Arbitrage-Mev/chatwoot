@@ -1,5 +1,6 @@
 class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseController
   before_action :fetch_inbox
+  before_action :validate_member_id_params, only: [:create, :update]
   before_action :current_agents_ids, only: [:create, :update]
 
   def show
@@ -30,6 +31,19 @@ class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseControl
   end
 
   private
+
+  def validate_member_id_params
+    ids = params.permit(user_ids: [])[:user_ids]
+    raise ActionController::ParameterMissing, :user_ids unless ids.is_a?(Array)
+
+    ids = ids.map { |id| Integer(id, exception: false) }.uniq
+    if ids.include?(nil) || (ids - Current.account.user_ids).present?
+      render json: { error: 'Invalid User IDs' }, status: :unprocessable_entity
+      return
+    end
+
+    params[:user_ids] = ids
+  end
 
   def fetch_updated_agents
     @agents = Current.account.users.where(id: @inbox.members.select(:user_id))

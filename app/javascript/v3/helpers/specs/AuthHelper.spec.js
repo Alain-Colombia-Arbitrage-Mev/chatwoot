@@ -1,6 +1,63 @@
-import { getLoginRedirectURL, getCredentialsFromEmail } from '../AuthHelper';
+import {
+  getLoginRedirectURL,
+  getCredentialsFromEmail,
+  rememberLoginRedirect,
+  consumeLoginRedirect,
+} from '../AuthHelper';
 
 describe('#URL Helpers', () => {
+  beforeEach(() => window.sessionStorage.clear());
+
+  describe('account login destinations', () => {
+    const user = { accounts: [{ id: 2, role: 'agent', status: 'active' }] };
+
+    it('restores a conversation after login and consumes the saved destination', () => {
+      rememberLoginRedirect('/app/accounts/2/conversations/41?messageId=7');
+      expect(consumeLoginRedirect(user)).toBe(
+        '/app/accounts/2/conversations/41?messageId=7'
+      );
+      expect(consumeLoginRedirect(user)).toBeNull();
+    });
+
+    it('does not redirect to another company', () => {
+      rememberLoginRedirect('/app/accounts/3/support/tickets');
+      expect(consumeLoginRedirect(user)).toBeNull();
+    });
+
+    it.each([
+      'https://example.com/app/accounts/2/conversations/41',
+      '//example.com/app/accounts/2/conversations/41',
+      '/app/accounts/2/../../login',
+      '/app/accounts/2/%2e%2e/3/conversations/41',
+      '/app/accounts/2/\\example.com',
+    ])('rejects an unsafe destination: %s', path => {
+      rememberLoginRedirect(path);
+      expect(consumeLoginRedirect(user)).toBeNull();
+    });
+
+    it('opens the company tickets for a support agent signing in normally', () => {
+      expect(getLoginRedirectURL({ user })).toBe(
+        '/app/accounts/2/support/tickets'
+      );
+    });
+
+    it('never reuses a conversation id from an inaccessible SSO account', () => {
+      expect(
+        getLoginRedirectURL({
+          ssoAccountId: '3',
+          ssoConversationId: '41',
+          user,
+        })
+      ).toBe('/app/accounts/2/support/tickets');
+    });
+
+    it('does not use a stale account_id absent from the account memberships', () => {
+      expect(getLoginRedirectURL({ user: { ...user, account_id: 3 } })).toBe(
+        '/app/accounts/2/support/tickets'
+      );
+    });
+  });
+
   describe('getLoginRedirectURL', () => {
     it('should return correct Account URL if account id is present', () => {
       expect(

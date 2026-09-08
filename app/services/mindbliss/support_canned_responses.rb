@@ -5,7 +5,7 @@ module Mindbliss::SupportCannedResponses
     {
       short_code: 'mb_describir_problema',
       content: [
-        'Hola, gracias por escribir a Mindbliss Power. Para ayudarte mejor, cuentanos en 2 o 3 frases que ocurre,',
+        'Hola, gracias por escribir a %<company_name>s. Para ayudarte mejor, cuentanos en 2 o 3 frases que ocurre,',
         'desde cuando sucede y que resultado esperabas. Con esa informacion podemos revisar tu caso mas rapido.'
       ].join(' ')
     },
@@ -48,7 +48,7 @@ module Mindbliss::SupportCannedResponses
   def provision_account!(account)
     RESPONSES.map do |response|
       canned_response = account.canned_responses.find_or_initialize_by(short_code: response.fetch(:short_code))
-      canned_response.content = response.fetch(:content)
+      canned_response.content = format(response.fetch(:content), company_name: account.name)
       canned_response.save! if canned_response.new_record? || canned_response.changed?
       canned_response
     end

@@ -17,6 +17,9 @@ COPY app/javascript/dashboard/api/inbox/conversation.js /app/app/javascript/dash
 COPY app/javascript/dashboard/components-next/sidebar/Sidebar.vue /app/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 COPY app/javascript/dashboard/composables/useCaptain.js /app/app/javascript/dashboard/composables/useCaptain.js
 COPY app/javascript/dashboard/composables/usePolicy.js /app/app/javascript/dashboard/composables/usePolicy.js
+COPY app/javascript/dashboard/constants/sessionStorage.js /app/app/javascript/dashboard/constants/sessionStorage.js
+COPY app/javascript/dashboard/routes/index.js /app/app/javascript/dashboard/routes/index.js
+COPY app/javascript/v3/helpers/AuthHelper.js /app/app/javascript/v3/helpers/AuthHelper.js
 COPY app/javascript/dashboard/components/ChatList.vue /app/app/javascript/dashboard/components/ChatList.vue
 COPY app/javascript/dashboard/components/ChatListHeader.vue /app/app/javascript/dashboard/components/ChatListHeader.vue
 COPY app/javascript/dashboard/components/SupportTicketBoard.vue /app/app/javascript/dashboard/components/SupportTicketBoard.vue
@@ -38,6 +41,8 @@ COPY app/javascript/widget/i18n/locale/en.json /app/app/javascript/widget/i18n/l
 COPY app/javascript/widget/i18n/locale/es.json /app/app/javascript/widget/i18n/locale/es.json
 COPY app/javascript/widget/store/modules/appConfig.js /app/app/javascript/widget/store/modules/appConfig.js
 COPY app/controllers/api/v1/accounts/agents_controller.rb /app/app/controllers/api/v1/accounts/agents_controller.rb
+COPY app/controllers/api/v1/accounts/inbox_members_controller.rb /app/app/controllers/api/v1/accounts/inbox_members_controller.rb
+COPY app/controllers/api/v1/accounts/inboxes_controller.rb /app/app/controllers/api/v1/accounts/inboxes_controller.rb
 COPY app/controllers/api/v1/accounts/captain/preferences_controller.rb /app/app/controllers/api/v1/accounts/captain/preferences_controller.rb
 COPY app/controllers/concerns/conversation_custom_attributes_concern.rb /app/app/controllers/concerns/conversation_custom_attributes_concern.rb
 COPY app/controllers/super_admin/app_configs_controller.rb /app/app/controllers/super_admin/app_configs_controller.rb
