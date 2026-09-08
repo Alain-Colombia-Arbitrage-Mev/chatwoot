@@ -10,6 +10,11 @@ messages, delivered through the company's Email channel, not a separate mail API
    sender-domain ownership. Add support agents to that company's inbox and team.
 2. Attach the existing webhook AgentBot to the Email inbox. Its webhook secret
    must match the bridge; never expose tokens in source or command output.
+   Include `deployment/nginx_mindbliss_support_webhook.conf` inside the TLS server
+   block and use `https://<chatwoot-host>/webhooks/chatwoot` as the outgoing URL.
+   Recent Chatwoot versions reject Docker-private webhook targets through
+   SafeFetch. Keep that SSRF protection enabled; do not allow all private networks.
+   Set Chatwoot's `WEBHOOK_TIMEOUT` to 90 seconds for retrieval/model latency.
 3. In `/opt/chatwoot/source/.env.mindbliss-support-agent`, add an explicit route:
 
 ```dotenv
@@ -63,6 +68,9 @@ The bridge runs as one worker. It serializes each conversation and stores durabl
 message markers/custom attributes in Chatwoot. If a reply succeeds but the handoff
 write fails, a retry completes the handoff without resending the email. Do not
 scale this service to multiple independent replicas without a distributed claim.
+Public replies must not set `source_id`: Chatwoot treats it as an already-delivered
+channel message and skips SMTP. The native mailer sets it after delivery;
+`content_attributes.email_support` remains the durable automation marker.
 
 To disable automation, remove the route and restart the bridge. Native inbox mail
 reception and manual agent replies continue to work.

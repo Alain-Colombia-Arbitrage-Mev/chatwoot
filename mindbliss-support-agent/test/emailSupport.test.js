@@ -50,6 +50,7 @@ test('email uses approved content and assigns only a confirmed support agent', a
   assert.match(reply.content, /Company Two/);
   assert.match(reply.content, /Responde al mismo correo/);
   assert.equal(reply.botId, 1);
+  assert.equal(reply.sourceId, undefined, 'SMTP must assign source_id after delivery');
   assert.equal(reply.contentAttributes.email_support.incoming_message_id, 77);
   assert.deepEqual(f.calls.find(c => c[0] === 'assign').slice(1), [2, 12, { assigneeId: 5 }]);
   assert.equal(f.conversation.status, 'open');
