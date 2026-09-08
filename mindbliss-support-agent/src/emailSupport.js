@@ -102,7 +102,7 @@ export class EmailSupportProcessor {
       content: buildEmailReply(route.companyName, conversationId, selected),
       privateMessage: false,
       botId: route.botId,
-      sourceId: `mb-email-reply-${route.accountId}-${payload.id}`,
+      // Chatwoot skips channel delivery when source_id is already populated.
       contentAttributes: { [AUTOMATION_KEY]: metadata }
     });
     await this.finishHandoff(route, conversationId, metadata);

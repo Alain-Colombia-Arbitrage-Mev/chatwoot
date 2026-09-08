@@ -7,7 +7,7 @@
 #
 # Optional:
 #   MINDBLISS_AGENT_NAME="Mindbliss AI Support"
-#   MINDBLISS_AGENT_OUTGOING_URL="http://mindbliss-support-agent:9108/webhooks/chatwoot"
+#   MINDBLISS_AGENT_OUTGOING_URL="https://soporte.mindblisspower.com/webhooks/chatwoot"
 #   MINDBLISS_AGENT_INBOX_IDS="all" or "1,2,3"
 #   MINDBLISS_AGENT_SECRET="pre-generated-secret"
 #   MINDBLISS_AGENT_OUTPUT_SECRETS="env"  # prints token/secret as env lines for root-only redirect
@@ -18,7 +18,7 @@ account_id = ENV.fetch('MINDBLISS_AGENT_ACCOUNT_ID')
 account = Account.find(account_id)
 
 name = ENV.fetch('MINDBLISS_AGENT_NAME', 'Mindbliss AI Support')
-outgoing_url = ENV.fetch('MINDBLISS_AGENT_OUTGOING_URL', 'http://mindbliss-support-agent:9108/webhooks/chatwoot')
+outgoing_url = ENV.fetch('MINDBLISS_AGENT_OUTGOING_URL', "#{ENV.fetch('FRONTEND_URL', 'https://soporte.mindblisspower.com').chomp('/')}/webhooks/chatwoot")
 description = 'Mindbliss Power AI support bridge: RAG, vector memory, triage and human escalation.'
 
 bot = account.agent_bots.find_or_initialize_by(name: name)
