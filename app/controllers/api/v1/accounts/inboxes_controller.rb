@@ -4,6 +4,7 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   before_action :fetch_agent_bot, only: [:set_agent_bot]
   # we are already handling the authorization in fetch inbox
   before_action :check_authorization, except: [:show]
+  before_action :validate_portal_account, only: [:create, :update]
 
   include Api::V1::Accounts::Concerns::WhatsappHealthManagement
 
@@ -88,6 +89,10 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   end
 
   private
+
+  def validate_portal_account
+    Current.account.portals.find(params[:portal_id]) if params[:portal_id].present?
+  end
 
   def fetch_inbox
     @inbox = Current.account.inboxes.find(params[:id])

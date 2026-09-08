@@ -30,5 +30,15 @@ RSpec.describe Mindbliss::SupportCannedResponses do
         'Ya tenemos tu caso registrado'
       )
     end
+
+    it 'uses only the company name of the account being provisioned' do
+      other_account = create(:account, name: 'Another Company')
+      described_class.provision_account!(other_account)
+
+      content = other_account.canned_responses.find_by!(short_code: 'mb_describir_problema').content
+      expect(content).to include('Another Company')
+      expect(content).not_to include('Mindbliss Power')
+      expect(account.canned_responses).to be_empty
+    end
   end
 end

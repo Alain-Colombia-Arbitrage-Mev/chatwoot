@@ -23,6 +23,7 @@ describe('#validateAuthenticateRoutePermission', () => {
 
   beforeEach(() => {
     next = vi.fn(); // Mock the next function
+    window.sessionStorage.clear();
   });
 
   describe('when user is not logged in', () => {
@@ -40,6 +41,25 @@ describe('#validateAuthenticateRoutePermission', () => {
       validateAuthenticateRoutePermission(to, next);
 
       expect(mockAssign).toHaveBeenCalledWith('/app/login');
+    });
+
+    it('restores the original conversation after the user signs in', async () => {
+      store.getters.isLoggedIn = false;
+      const destination = '/app/accounts/1/conversations/42';
+      await validateAuthenticateRoutePermission(
+        { fullPath: destination, params: { accountId: 1 } },
+        next
+      );
+      store.getters.isLoggedIn = true;
+      store.getters.getCurrentUser = {
+        account_id: 1,
+        accounts: [{ id: 1, role: 'agent', status: 'active' }],
+      };
+      await validateAuthenticateRoutePermission(
+        { fullPath: '/app/accounts/1/dashboard', params: { accountId: 1 } },
+        next
+      );
+      expect(next).toHaveBeenCalledWith(destination);
     });
   });
 

@@ -113,7 +113,20 @@ RSpec.describe 'Inbox Member API', type: :request do
              as: :json
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.body).to include('User must exist')
+        expect(response.body).to include('Invalid User IDs')
+      end
+
+      it 'rejects an agent from another company without adding any members' do
+        foreign_agent = create(:user, account: create(:account), role: :agent)
+
+        expect do
+          post "/api/v1/accounts/#{account.id}/inbox_members",
+               headers: administrator.create_new_auth_token,
+               params: { inbox_id: inbox.id, user_ids: [agent_to_add.id, foreign_agent.id] },
+               as: :json
+        end.not_to change(inbox.inbox_members, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
@@ -188,7 +201,28 @@ RSpec.describe 'Inbox Member API', type: :request do
               as: :json
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.body).to include('User must exist')
+        expect(response.body).to include('Invalid User IDs')
+      end
+
+      it 'rejects a cross-company replacement and preserves the existing team' do
+        foreign_agent = create(:user, account: create(:account), role: :agent)
+        patch "/api/v1/accounts/#{account.id}/inbox_members",
+              headers: administrator.create_new_auth_token,
+              params: { inbox_id: inbox.id, user_ids: [foreign_agent.id] },
+              as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(inbox.members.reload.ids).to eq([old_agent.id])
+      end
+
+      it 'accepts an empty list to remove all inbox members' do
+        patch "/api/v1/accounts/#{account.id}/inbox_members",
+              headers: administrator.create_new_auth_token,
+              params: { inbox_id: inbox.id, user_ids: [] },
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(inbox.members.reload).to be_empty
       end
     end
   end
