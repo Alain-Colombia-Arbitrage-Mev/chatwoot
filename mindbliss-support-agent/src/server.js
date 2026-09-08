@@ -16,6 +16,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, {
         status: 'ok',
         memory: config.memory.enabled ? 'enabled' : 'disabled',
+        emailSupport: { enabledInboxes: config.emailSupport.routes.length, mode: 'approved_knowledge_or_receipt' },
         support: {
           provider: config.support.provider,
           model: config.support.provider === 'openrouter' ? config.support.openRouter.model : 'mindbliss'

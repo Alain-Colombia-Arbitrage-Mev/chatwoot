@@ -54,7 +54,7 @@ export class GraphMemory {
       limit
     }, `
       MATCH (:Account {id: $account_id})-[:HAS_KB_DOC]->(doc:KnowledgeDocument)
-      RETURN doc.category, doc.priority, doc.summary, doc.id, doc.created_at, doc.title
+      RETURN doc.category, doc.priority, doc.summary, doc.id, doc.created_at, doc.title, doc.content
       ORDER BY doc.created_at DESC
       LIMIT $limit
     `);
@@ -70,6 +70,9 @@ export class GraphMemory {
         message_id: graphString(row[3]),
         created_at: graphString(row[4]),
         title: graphString(row[5]),
+        content: graphString(row[6]),
+        account_id: accountId,
+        kb_scope: 'account',
         source: 'falkordb_kb'
       }
     })).filter(item => item.payload.summary));

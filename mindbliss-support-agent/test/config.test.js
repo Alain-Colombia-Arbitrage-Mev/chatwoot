@@ -2,6 +2,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readConfig } from '../src/config.js';
 
+test('email routes require explicit company, inbox, bot and team identifiers', () => {
+  const env = {
+    CHATWOOT_WEBHOOK_SECRET: 'webhook-secret', CHATWOOT_API_ACCESS_TOKEN: 'api-token',
+    SUPPORT_AI_PROVIDER: 'openrouter', OPENROUTER_API_KEY: 'llm-token', MEMORY_ENABLED: 'false'
+  };
+  const route = { accountId: 2, inboxId: 3, teamId: 1, botId: 1, companyName: 'Company Two' };
+  assert.deepEqual(readConfig(env).emailSupport.routes, []);
+  assert.deepEqual(readConfig({ ...env, EMAIL_SUPPORT_ROUTES: JSON.stringify([route]) }).emailSupport.routes, [route]);
+  for (const invalid of [{ ...route, accountId: 0 }, { ...route, inboxId: '3' }, { ...route, companyName: '' }]) {
+    assert.throws(() => readConfig({ ...env, EMAIL_SUPPORT_ROUTES: JSON.stringify([invalid]) }), /EMAIL_SUPPORT_ROUTES/);
+  }
+  assert.throws(() => readConfig({ ...env, EMAIL_SUPPORT_ROUTES: JSON.stringify([route, route]) }), /Duplicate/);
+});
+
 test('rejects placeholder secrets instead of booting half-configured', () => {
   assert.throws(
     () =>

@@ -68,6 +68,10 @@ export function readConfig(env = process.env) {
       enabled: boolFrom(env.KNOWLEDGE_COMMANDS_ENABLED, true),
       maxChars: intFrom(env.KNOWLEDGE_COMMAND_MAX_CHARS, 8000)
     },
+    emailSupport: {
+      routes: emailRoutesFrom(env.EMAIL_SUPPORT_ROUTES || '[]'),
+      minRelevance: numberFrom(env.EMAIL_SUPPORT_MIN_RELEVANCE, 0.7, { min: 0, max: 1 })
+    },
     resolutionMemory: {
       enabled: boolFrom(env.RESOLUTION_MEMORY_ENABLED, true),
       includePrivate: boolFrom(env.RESOLUTION_MEMORY_INCLUDE_PRIVATE, false),
@@ -179,4 +183,21 @@ function listFrom(value) {
     .split(',')
     .map(part => part.trim().toLowerCase())
     .filter(Boolean)));
+}
+
+function emailRoutesFrom(value) {
+  const routes = JSON.parse(value);
+  if (!Array.isArray(routes)) throw new Error('EMAIL_SUPPORT_ROUTES must be an array');
+  const seen = new Set();
+  return routes.map(route => {
+    const ids = ['accountId', 'inboxId', 'teamId', 'botId'];
+    if (!route || ids.some(key => !Number.isSafeInteger(route[key]) || route[key] <= 0) ||
+        typeof route.companyName !== 'string' || !route.companyName.trim()) {
+      throw new Error('Each EMAIL_SUPPORT_ROUTES entry needs accountId, inboxId, teamId, botId and companyName');
+    }
+    const key = `${route.accountId}:${route.inboxId}`;
+    if (seen.has(key)) throw new Error('Duplicate EMAIL_SUPPORT_ROUTES inbox');
+    seen.add(key);
+    return { ...Object.fromEntries(ids.map(id => [id, route[id]])), companyName: route.companyName.trim().slice(0, 120) };
+  });
 }
