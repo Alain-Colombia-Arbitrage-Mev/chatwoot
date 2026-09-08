@@ -602,6 +602,20 @@ RSpec.describe 'Inboxes API', type: :request do
         expect(inbox.reload.portal_id).to eq(portal.id)
       end
 
+      [nil, 'null'].each do |empty_portal|
+        it "allows clearing the FAQ portal with #{empty_portal.inspect}" do
+          inbox.update!(portal: portal)
+
+          patch "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}",
+                headers: admin.create_new_auth_token,
+                params: valid_params.merge(portal_id: empty_portal),
+                as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(inbox.reload.portal_id).to be_nil
+        end
+      end
+
       it 'will not update inbox for agent' do
         agent = create(:user, account: account, role: :agent)
 

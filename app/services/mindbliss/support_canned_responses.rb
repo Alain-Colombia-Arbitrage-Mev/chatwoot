@@ -5,7 +5,7 @@ module Mindbliss::SupportCannedResponses
     {
       short_code: 'mb_describir_problema',
       content: [
-        'Hola, gracias por escribir a %{company_name}. Para ayudarte mejor, cuentanos en 2 o 3 frases que ocurre,',
+        'Hola, gracias por escribir a %<company_name>s. Para ayudarte mejor, cuentanos en 2 o 3 frases que ocurre,',
         'desde cuando sucede y que resultado esperabas. Con esa informacion podemos revisar tu caso mas rapido.'
       ].join(' ')
     },

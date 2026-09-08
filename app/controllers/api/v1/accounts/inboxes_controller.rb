@@ -91,7 +91,7 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   private
 
   def validate_portal_account
-    Current.account.portals.find(params[:portal_id]) if params[:portal_id].present?
+    Current.account.portals.find(params[:portal_id]) if params[:portal_id].present? && params[:portal_id] != 'null'
   end
 
   def fetch_inbox
@@ -109,9 +109,7 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
     account_channels_method.create!(permitted_params(channel_type_from_params::EDITABLE_ATTRS)[:channel].except(:type))
   end
 
-  def allowed_channel_types
-    %w[web_widget api email line telegram whatsapp sms]
-  end
+  def allowed_channel_types = %w[web_widget api email line telegram whatsapp sms]
 
   def update_inbox_working_hours
     @inbox.update_working_hours(params.permit(working_hours: Inbox::OFFISABLE_ATTRS)[:working_hours]) if params[:working_hours]
@@ -127,9 +125,7 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
     update_channel_feature_flags
   end
 
-  def channel_update_required?
-    permitted_params(get_channel_attributes(@inbox.channel_type))[:channel].present?
-  end
+  def channel_update_required? = permitted_params(get_channel_attributes(@inbox.channel_type))[:channel].present?
 
   def validate_and_update_email_channel(channel_attributes)
     validate_email_channel(channel_attributes)
