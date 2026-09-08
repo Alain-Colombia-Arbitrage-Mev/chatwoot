@@ -2,6 +2,28 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MemoryStore } from '../src/memoryStore.js';
 
+test('email knowledge excludes foreign and unapproved memories before reranking', async () => {
+  const store = new MemoryStore({ enabled: true, rerankEnabled: true, qdrantUrl: 'http://qdrant:6333', openRouterApiKey: 'test' });
+  store.embed = async () => [];
+  store.searchAccountKnowledge = async () => [
+    { payload: { account_id: 2, kb_scope: 'account', source: 'chatwoot_kb_note', content: 'approved' } },
+    { payload: { account_id: 3, kb_scope: 'account', source: 'chatwoot_kb_note', content: 'foreign' } },
+    { payload: { account_id: 2, source: 'chatwoot_resolution', content: 'unreviewed generated answer' } }
+  ];
+  store.graph.related = async () => [];
+  let rerankCalls = 0;
+  store.rerank = async (_query, hits) => {
+    rerankCalls += 1;
+    assert.equal(hits.length, 1);
+    assert.equal(hits[0].payload.content, 'approved');
+    return hits;
+  };
+  assert.equal((await store.approvedKnowledge({ account: { id: 2 }, content: 'support question' })).length, 1);
+  assert.equal(rerankCalls, 1);
+  store.rerank = async () => { throw new Error('reranker offline'); };
+  await assert.rejects(store.approvedKnowledge({ account: { id: 2 }, content: 'support question' }), /reranker offline/);
+});
+
 test('qdrant requests omit api-key header when local qdrant has no key', async () => {
   const calls = [];
   const originalFetch = globalThis.fetch;

@@ -1,4 +1,5 @@
 import { ChatwootClient } from './chatwootClient.js';
+import { EmailSupportProcessor, isEmailWebhook } from './emailSupport.js';
 import {
   buildKnowledgeAck,
   buildKnowledgePayload,
@@ -30,6 +31,9 @@ export class WebhookProcessor {
     this.chatwoot = deps.chatwoot || new ChatwootClient(config.chatwoot);
     this.supportBrain = deps.supportBrain || new SupportBrain(config.support);
     this.memory = deps.memory || new MemoryStore(config.memory);
+    this.emailSupport = deps.emailSupport || new EmailSupportProcessor(config.emailSupport, {
+      chatwoot: this.chatwoot, memory: this.memory, supportBrain: this.supportBrain
+    });
     this.router =
       deps.router ||
       new ConversationRouter(
@@ -45,6 +49,7 @@ export class WebhookProcessor {
   async process(payload, deliveryId = '') {
     if (isKnowledgeCommandWebhook(payload))
       return this.processKnowledgeCommand(payload, deliveryId);
+    if (isEmailWebhook(payload)) return this.emailSupport.process(payload);
     if (isResolvedConversationWebhook(payload))
       return this.processResolvedConversation(payload, deliveryId);
     if (!shouldProcessWebhook(payload)) return { status: 'ignored' };

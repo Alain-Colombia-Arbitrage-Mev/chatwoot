@@ -25,6 +25,27 @@ export class MemoryStore {
     return dedupeMemories([...hits, ...graphHits]);
   }
 
+  async approvedKnowledge(payload) {
+    if (!this.enabled() || !this.config.rerankEnabled) return [];
+    const content = redactSensitiveText(payload.content);
+    const accountId = Number(payload.account?.id);
+    if (!content || !Number.isSafeInteger(accountId) || accountId <= 0) return [];
+    let hits = [];
+    if (this.vectorEnabled()) {
+      const vector = await this.embed(`query: ${content}`);
+      hits = await this.searchAccountKnowledge(payload, vector);
+    }
+    const graph = await this.graph.related({ account: { id: accountId } });
+    const approved = dedupeMemories([...hits, ...graph]).filter(hit => {
+      const p = hit.payload || {};
+      return Number(p.account_id) === accountId && p.kb_scope === 'account' &&
+        ['chatwoot_kb_note', 'chatwoot_help_center', 'falkordb_kb'].includes(p.source) &&
+        cleanText(p.content || p.summary);
+    });
+    // Auto email replies require the reranker, including for a single candidate.
+    return approved.length ? this.rerank(content, approved) : [];
+  }
+
   async store(payload, triage, supportResult) {
     if (!this.enabled()) return false;
     const content = redactSensitiveText(cleanText(payload.content).slice(0, this.config.storeMaxChars));

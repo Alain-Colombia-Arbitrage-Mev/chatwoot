@@ -2,6 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SupportBrain, pseudonymousUser } from '../src/supportBrain.js';
 
+test('email LLM can only select an existing approved document', async () => {
+  let output = '{"source_id":"K1","answer":"Invented content"}';
+  const brain = new SupportBrain({ provider: 'openrouter', openRouter: {
+    apiKey: 'test', chatUrl: 'https://openrouter.ai/api/v1/chat/completions', model: 'upstage/solar-pro4'
+  } }, { fetchJson: async (_url, request) => {
+    assert.equal(request.body.model, 'upstage/solar-pro4');
+    assert.equal(request.body.temperature, 0);
+    return { choices: [{ message: { content: output } }] };
+  } });
+  const knowledge = [{ payload: { content: 'Approved response' } }];
+  assert.equal(await brain.selectEmailKnowledge('question', knowledge, 'Company Two'), knowledge[0]);
+  for (const invalid of ['{"source_id":"K99"}', '{"source_id":null}', 'arbitrary prose']) {
+    output = invalid;
+    assert.equal(await brain.selectEmailKnowledge('question', knowledge, 'Company Two'), null);
+  }
+});
+
 test('calls legacy Mindbliss support brain with service token', async () => {
   const calls = [];
   const brain = new SupportBrain({

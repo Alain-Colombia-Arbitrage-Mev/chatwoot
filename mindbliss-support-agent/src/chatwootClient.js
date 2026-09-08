@@ -113,7 +113,7 @@ export class ChatwootClient {
     return messages.some(message => message.private === true && String(message.content || '').includes(marker));
   }
 
-  async createMessage(accountId, conversationId, { content, privateMessage = true, sourceId }) {
+  async createMessage(accountId, conversationId, { content, privateMessage = true, sourceId, botId, contentAttributes }) {
     return this.request(`/api/v1/accounts/${accountId}/conversations/${conversationId}/messages`, {
       method: 'POST',
       body: {
@@ -121,7 +121,9 @@ export class ChatwootClient {
         private: privateMessage,
         message_type: 'outgoing',
         content_type: 'text',
-        source_id: sourceId
+        source_id: sourceId,
+        ...(botId ? { sender_type: 'AgentBot', sender_id: botId } : {}),
+        ...(contentAttributes ? { content_attributes: contentAttributes } : {})
       }
     });
   }
@@ -185,6 +187,15 @@ export class ChatwootClient {
     const data = await this.request(`/api/v1/accounts/${accountId}/teams`);
     const payload = data?.payload || data?.data?.payload || data || [];
     return Array.isArray(payload) ? payload : [];
+  }
+
+  async listTeamMembers(accountId, teamId) {
+    const data = await this.request(`/api/v1/accounts/${accountId}/teams/${teamId}/team_members`);
+    return Array.isArray(data) ? data : data?.payload || [];
+  }
+
+  async getInbox(accountId, inboxId) {
+    return this.request(`/api/v1/accounts/${accountId}/inboxes/${inboxId}`);
   }
 
   async listInboxes(accountId) {
