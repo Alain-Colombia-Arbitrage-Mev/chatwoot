@@ -84,4 +84,11 @@ RUN pnpm i --frozen-lockfile \
 
 COPY deployment/mindbliss_support_agent_setup.rb /app/deployment/mindbliss_support_agent_setup.rb
 
+COPY app/views/mailers/agent_notifications/conversation_notifications_mailer/assigned_conversation_new_message.liquid /app/app/views/mailers/agent_notifications/conversation_notifications_mailer/assigned_conversation_new_message.liquid
+COPY app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_assignment.liquid /app/app/views/mailers/agent_notifications/conversation_notifications_mailer/conversation_assignment.liquid
+COPY app/views/mailers/agent_notifications/conversation_notifications_mailer/participating_conversation_new_message.liquid /app/app/views/mailers/agent_notifications/conversation_notifications_mailer/participating_conversation_new_message.liquid
+COPY app/views/mailers/team_notifications/automation_notification_mailer/conversation_creation.liquid /app/app/views/mailers/team_notifications/automation_notification_mailer/conversation_creation.liquid
+COPY app/views/mailers/team_notifications/automation_notification_mailer/conversation_updated.liquid /app/app/views/mailers/team_notifications/automation_notification_mailer/conversation_updated.liquid
+COPY app/views/mailers/team_notifications/automation_notification_mailer/message_created.liquid /app/app/views/mailers/team_notifications/automation_notification_mailer/message_created.liquid
+
 RUN echo "$BUILD_SHA" > /app/.git_sha
