@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "docker/Dockerfile"
+  },
+  "deploy": {
+    "preDeployCommand": ["POSTGRES_STATEMENT_TIMEOUT=600s bundle exec rails db:chatwoot_prepare"],
+    "startCommand": "bundle exec rails ip_lookup:setup && bundle exec rails server -b 0.0.0.0 -p $PORT",
+    "healthcheckPath": "/api",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
