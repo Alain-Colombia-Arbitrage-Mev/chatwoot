@@ -68,6 +68,7 @@ class ContactInbox < ApplicationRecord
 
   def validate_whatsapp_source_id
     return if WHATSAPP_CHANNEL_REGEX.match?(source_id)
+    return if inbox.channel.evolution? && WHATSAPP_EVOLUTION_JID_REGEX.match?(source_id)
 
     errors.add(:source_id, "invalid source id for whatsapp inbox. valid Regex #{WHATSAPP_CHANNEL_REGEX}")
   end

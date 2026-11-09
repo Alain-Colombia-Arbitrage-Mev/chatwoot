@@ -231,6 +231,11 @@ class Conversation < ApplicationRecord
     inbox.inbox_type == 'Twitter' && additional_attributes['type'] == 'tweet'
   end
 
+  # Multi-participant chats (WhatsApp groups/communities via Evolution API).
+  def group_chat?
+    additional_attributes&.dig('chat_type') == 'group'
+  end
+
   def self.unread_messages_count_arel
     messages = Message.arel_table
     conversations = arel_table

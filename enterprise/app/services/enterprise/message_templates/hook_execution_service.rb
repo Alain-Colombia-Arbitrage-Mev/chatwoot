@@ -45,7 +45,12 @@ module Enterprise::MessageTemplates::HookExecutionService
   end
 
   def captain_conversation_message?
-    message.captain_response_triggering? && captain_assistant_configured? && !inbox.external_bot_active?
+    message.captain_response_triggering? && captain_assistant_configured? && !inbox.external_bot_active? && captain_addressed_in_group?
+  end
+
+  # In group chats Captain only answers when it is @mentioned or someone replies to one of its messages.
+  def captain_addressed_in_group?
+    !conversation.group_chat? || message.content_attributes['bot_mentioned'] == true
   end
 
   def perform_handoff

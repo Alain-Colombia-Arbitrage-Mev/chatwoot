@@ -25,7 +25,7 @@ class Conversations::MessageWindowService
     when 'Channel::Tiktok'
       tiktok_messaging_window
     when 'Channel::Whatsapp'
-      MESSAGING_WINDOW_24_HOURS
+      whatsapp_messaging_window
     when 'Channel::TwilioSms'
       twilio_messaging_window
     end
@@ -35,6 +35,11 @@ class Conversations::MessageWindowService
     return false if last_incoming_message.nil?
 
     Time.current < last_incoming_message.created_at + time
+  end
+
+  # WhatsApp Web (Evolution) is a linked device, not the Cloud API, so Meta's 24h window doesn't apply.
+  def whatsapp_messaging_window
+    MESSAGING_WINDOW_24_HOURS unless @conversation.inbox.channel.evolution?
   end
 
   def api_messaging_window

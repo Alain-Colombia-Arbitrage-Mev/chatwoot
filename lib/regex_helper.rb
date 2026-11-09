@@ -22,4 +22,6 @@ module RegexHelper
   WHATSAPP_WAMID_TOKEN_REGEX = Regexp.new(WHATSAPP_WAMID_TOKEN_PATTERN, Regexp::IGNORECASE)
   TWILIO_CHANNEL_WHATSAPP_REGEX = Regexp.new("\\A(?:whatsapp:\\+\\d{1,15}|whatsapp:#{WHATSAPP_BSUID_PATTERN})\\z")
   WHATSAPP_CHANNEL_REGEX = Regexp.new("\\A(?:\\d{1,15}|#{WHATSAPP_BSUID_PATTERN})\\z")
+  # WhatsApp Web (Evolution API) also addresses groups (…@g.us, legacy "owner-timestamp@g.us") and LID-only users (…@lid).
+  WHATSAPP_EVOLUTION_JID_REGEX = /\A\d{1,25}(?:-\d{1,15})?@(?:g\.us|lid)\z/
 end

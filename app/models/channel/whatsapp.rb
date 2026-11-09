@@ -31,7 +31,7 @@ class Channel::Whatsapp < ApplicationRecord
   encrypts :business_management_token if Chatwoot.encryption_configured?
 
   # default at the moment is 360dialog lets change later.
-  PROVIDERS = %w[default whatsapp_cloud].freeze
+  PROVIDERS = %w[default whatsapp_cloud evolution].freeze
   before_validation :ensure_webhook_verify_token
 
   validates :provider, inclusion: { in: PROVIDERS }
@@ -69,11 +69,19 @@ class Channel::Whatsapp < ApplicationRecord
   end
 
   def provider_service
-    if provider == 'whatsapp_cloud'
+    case provider
+    when 'whatsapp_cloud'
       Whatsapp::Providers::WhatsappCloudService.new(whatsapp_channel: self)
+    when 'evolution'
+      Whatsapp::Providers::EvolutionService.new(whatsapp_channel: self)
     else
       Whatsapp::Providers::Whatsapp360DialogService.new(whatsapp_channel: self)
     end
+  end
+
+  # WhatsApp Web (Evolution API / Baileys): no templates, no 24h window, supports groups.
+  def evolution?
+    provider == 'evolution'
   end
 
   def template_access_token
@@ -146,7 +154,7 @@ class Channel::Whatsapp < ApplicationRecord
   private
 
   def ensure_webhook_verify_token
-    provider_config['webhook_verify_token'] ||= SecureRandom.hex(16) if provider == 'whatsapp_cloud'
+    provider_config['webhook_verify_token'] ||= SecureRandom.hex(16) if provider == 'whatsapp_cloud' || evolution?
   end
 
   def validate_provider_config
@@ -164,6 +172,8 @@ class Channel::Whatsapp < ApplicationRecord
   end
 
   def perform_webhook_setup(is_coexistence: nil)
+    return provider_service.setup_webhook if evolution?
+
     webhook_setup_service(is_coexistence: is_coexistence).perform
   end
 
@@ -176,6 +186,8 @@ class Channel::Whatsapp < ApplicationRecord
   end
 
   def should_auto_setup_webhooks?
+    return true if evolution?
+
     # Embedded signup and Manual V2 run webhook setup explicitly so their API
     # responses can reflect the real result instead of swallowing callback errors.
     explicitly_configured_sources = %w[embedded_signup manual_setup_v2]

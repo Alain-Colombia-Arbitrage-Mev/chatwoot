@@ -254,7 +254,9 @@
           "WHATSAPP_CLOUD_DESC": "Quick setup through Meta",
           "WHATSAPP_CLOUD_MANUAL_SETUP_DESC": "Manual setup with Cloud API credentials",
           "TWILIO_DESC": "Connect via Twilio credentials",
-          "360_DIALOG": "360Dialog"
+          "360_DIALOG": "360Dialog",
+          "EVOLUTION": "WhatsApp Web (Evolution API)",
+          "EVOLUTION_DESC": "Link a phone through your Evolution API server. Supports groups and communities."
         },
         "SELECT_PROVIDER": {
           "TITLE": "Select your API provider",
@@ -438,6 +440,37 @@
           "ERROR_MESSAGE": "We were not able to save the WhatsApp channel",
           "MANUAL_RESTRICTION_WARNING": "WhatsApp Embedded Signup is temporarily unavailable due to an API-level issue on Meta’s side, not a problem with Chatwoot. Manual setup works only for numbers already connected to WhatsApp Cloud API. Numbers using WhatsApp Business app coexistence are not supported in this flow yet. We’re working closely with Meta to resolve the issue as quickly as possible. Thanks for your patience.",
           "STATUS_LINK": "View status updates"
+        },
+        "EVOLUTION": {
+          "RISK_WARNING": "WhatsApp Web via Evolution API is not an official Meta integration. Use a dedicated number, avoid bulk or unsolicited messages, and keep the phone online regularly to reduce the risk of the number being banned.",
+          "API_URL": {
+            "LABEL": "Evolution API URL",
+            "PLACEHOLDER": "https://wa.example.com",
+            "ERROR": "Enter a valid URL"
+          },
+          "API_KEY": {
+            "LABEL": "Evolution API key",
+            "PLACEHOLDER": "Global API key or instance token",
+            "ERROR": "This field is required"
+          },
+          "INSTANCE_NAME": {
+            "LABEL": "Instance name",
+            "PLACEHOLDER": "support-whatsapp",
+            "HELP": "An existing instance, or a new one that will be created for you (needs the global API key).",
+            "ERROR": "Use letters, numbers, dashes or underscores"
+          },
+          "CONNECT": {
+            "TITLE": "Link your WhatsApp",
+            "QR_DESC": "On the phone open WhatsApp → Linked devices → Link a device and scan this code.",
+            "PAIRING_DESC": "On the phone open WhatsApp → Linked devices → Link with phone number instead, and enter this code.",
+            "USE_PAIRING_CODE": "Link with a code instead",
+            "USE_QR_CODE": "Show QR code instead",
+            "REFRESH": "Refresh code",
+            "CONNECTED": "WhatsApp is linked.",
+            "CONTINUE": "Continue",
+            "SKIP": "Link later",
+            "ERROR": "Could not reach the Evolution API. Check the URL, key and instance name."
+          }
         }
       },
       "VOICE": {

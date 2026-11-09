@@ -65,6 +65,16 @@ class Inboxes extends CacheEnabledApiClient {
     });
   }
 
+  getWhatsappEvolutionStatus(inboxId) {
+    return axios.get(`${this.url}/${inboxId}/whatsapp_evolution`);
+  }
+
+  connectWhatsappEvolution(inboxId, number = '') {
+    return axios.post(`${this.url}/${inboxId}/whatsapp_evolution/connect`, {
+      number,
+    });
+  }
+
   resetSecret(inboxId) {
     return axios.post(`${this.url}/${inboxId}/reset_secret`);
   }
