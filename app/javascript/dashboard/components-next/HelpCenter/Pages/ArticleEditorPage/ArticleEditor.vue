@@ -26,6 +26,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hasNewerVersion: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -35,6 +39,7 @@ const emit = defineEmits([
   'setCategory',
   'previewArticle',
   'createArticle',
+  'reloadArticle',
 ]);
 
 const { t } = useI18n();
@@ -60,7 +65,18 @@ const editorRef = useTemplateRef('editorRef');
 
 const hasPendingUploads = () => !!editorRef.value?.hasPendingUploads();
 
+// Files picked between the create dispatch and its redirect would die with
+// this editor instance; hold them off for that window.
+const uploadsBlockedMessage = computed(() =>
+  isNewArticle.value && props.isUpdating
+    ? t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.CREATE_IN_PROGRESS')
+    : ''
+);
+
 onBeforeRouteLeave(() => {
+  // Always let the post-create redirect through: blocking it strands a "new"
+  // page whose article already exists, and the next blur would duplicate it.
+  if (isNewArticle.value && props.isUpdating) return true;
   if (!hasPendingUploads()) return true;
   useAlert(t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.UPLOAD_IN_PROGRESS'));
   return false;
@@ -107,8 +123,16 @@ watch(
   }
 );
 
+// A new article has no id to save to yet, so hand every edit to the page right
+// away; a debounced save would die with this editor when the create redirects.
 const scheduleSave = () => {
-  if (isNewArticle.value) return;
+  if (isNewArticle.value) {
+    emit('saveArticle', {
+      title: localTitle.value,
+      content: localContent.value,
+    });
+    return;
+  }
   debouncedSave();
 };
 
@@ -169,6 +193,12 @@ const previewArticle = () => {
   emit('previewArticle');
 };
 
+// Drop the queued save first, or it can land during the fetch and overwrite the newer version being loaded.
+const reloadArticle = () => {
+  cancelSave();
+  emit('reloadArticle');
+};
+
 const handleCreateArticle = event => {
   if (!isNewArticle.value) return;
   const title = event?.target?.value || '';
@@ -181,6 +211,8 @@ const handleCreateArticle = event => {
   }
   emit('createArticle', { title, content: localContent.value });
 };
+
+defineExpose({ syncLocalState });
 </script>
 
 <template>
@@ -194,9 +226,11 @@ const handleCreateArticle = event => {
         :pending-changes="hasPendingChanges"
         :is-saving="isSaving"
         :has-pending-uploads="hasPendingUploads"
+        :has-newer-version="hasNewerVersion"
         @go-back="onClickGoBack"
         @preview-article="previewArticle"
         @show-diff="diffPanelRef?.open()"
+        @reload-article="reloadArticle"
       />
       <ArticleDiffPanel ref="diffPanelRef" :article="article" />
     </template>
@@ -217,6 +251,7 @@ const handleCreateArticle = event => {
           @save-article="values => emit('saveArticle', values)"
           @set-author="setAuthorId"
           @set-category="setCategoryId"
+          @preview-article="previewArticle"
         />
       </div>
       <FullEditor
@@ -228,6 +263,7 @@ const handleCreateArticle = event => {
           t('HELP_CENTER.EDIT_ARTICLE_PAGE.EDIT_ARTICLE.EDITOR_PLACEHOLDER')
         "
         :enabled-menu-options="ARTICLE_EDITOR_MENU_OPTIONS"
+        :uploads-blocked-message="uploadsBlockedMessage"
         :autofocus="!isNewArticle"
       />
     </template>

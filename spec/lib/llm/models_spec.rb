@@ -27,9 +27,16 @@ RSpec.describe Llm::Models do
     end
 
     it 'routes each FAQ operation independently' do
-      expect(described_class.default_model_for('document_faq_generation')).to eq('gpt-4.1-mini')
+      expect(described_class.default_model_for('document_faq_generation')).to eq('gpt-6-luna')
       expect(described_class.default_model_for('conversation_faq_generation')).to eq('gpt-5.2')
-      expect(described_class.default_model_for('conversation_faq_matching')).to eq('gpt-4.1-mini')
+      expect(described_class.default_model_for('conversation_faq_matching')).to eq('gpt-6-luna')
+    end
+
+    it 'uses Solar Pro 4 for Copilot and GPT-5.2 for Copilot workflows' do
+      expect(described_class.default_model_for('copilot')).to eq('upstage/solar-pro4')
+      expect(described_class.default_model_for('copilot_workflows')).to eq('gpt-5.2')
+      expect(described_class.features.dig('copilot_workflows', 'reasoning_effort')).to eq('none')
+      expect(described_class.internal_feature?('copilot_workflows')).to be(true)
     end
 
     it 'routes reply suggestions through OpenRouter Solar Pro 4' do
@@ -44,7 +51,7 @@ RSpec.describe Llm::Models do
 
     it 'offers only supported OpenAI models for conversation completion' do
       expect(described_class.models_for('conversation_completion')).to eq(
-        %w[gpt-4.1-mini gpt-5-mini gpt-4.1 gpt-5.1 gpt-5.2]
+        %w[gpt-6-luna gpt-5-mini gpt-5.1 gpt-5.2]
       )
     end
   end

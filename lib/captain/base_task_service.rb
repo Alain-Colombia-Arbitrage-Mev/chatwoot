@@ -2,8 +2,9 @@ class Captain::BaseTaskService
   include Integrations::LlmInstrumentation
   include Captain::ToolInstrumentation
   include Llm::ExceptionTrackable
+  include Captain::LlmCredentials
 
-  # gpt-4o-mini supports 128,000 tokens
+  # Sized for a 128,000-token context window
   # 1 token is approx 4 characters
   # sticking with 120000 to be safe
   # 120000 * 4 = 480,000 characters (rounding off downwards to 400,000 to be safe)
@@ -41,15 +42,13 @@ class Captain::BaseTaskService
     return { error: I18n.t('captain.disabled'), error_code: 403 } unless captain_tasks_enabled?
 
     model = resolved_model(model: model, feature: feature)
-    provider = Llm::Models.provider_for(model)
-    credential = llm_credential(provider: provider)
-    return { error: I18n.t('captain.api_key_missing'), error_code: 401 } if credential.blank?
+    return { error: I18n.t('captain.api_key_missing'), error_code: 401 } if provider_llm_credential(Llm::Models.provider_for(model)).blank?
 
-    instrumentation_params = build_instrumentation_params(model, messages)
+    instrumentation_params = build_instrumentation_params(model, messages, feature: feature)
     instrumentation_method = tools.any? ? :instrument_tool_session : :instrument_llm_call
 
     response = send(instrumentation_method, instrumentation_params) do
-      execute_ruby_llm_request(model: model, messages: messages, schema: schema, tools: tools, credential: credential.merge(provider: provider))
+      execute_ruby_llm_request(model: model, messages: messages, schema: schema, tools: tools, feature: feature)
     end
 
     return response unless build_follow_up_context? && response[:message].present?
@@ -66,30 +65,36 @@ class Captain::BaseTaskService
     route[:model]
   end
 
-  def execute_ruby_llm_request(model:, messages:, credential:, schema: nil, tools: [])
-    Llm::Config.with_api_key(credential[:api_key], api_base: api_base, provider: credential[:provider]) do |context|
-      chat = build_chat(context, model: model, messages: messages, schema: schema, tools: tools)
+  def execute_ruby_llm_request(model:, messages:, schema: nil, tools: [], feature: nil)
+    provider = Llm::Models.provider_for(model)
+    credential = provider_llm_credential(provider)
+
+    Llm::Config.with_api_key(credential[:api_key], api_base: api_base, provider: provider) do |context|
+      chat = build_chat(context, model: model, messages: messages, schema: schema, tools: tools, feature: feature)
 
       conversation_messages = messages.reject { |m| m[:role] == 'system' }
       return { error: 'No conversation messages provided', error_code: 400, request_messages: messages } if conversation_messages.empty?
 
       add_messages_if_needed(chat, conversation_messages)
-      build_ruby_llm_response(chat.ask(conversation_messages.last[:content]), messages)
+      build_ruby_llm_response(chat.ask(conversation_messages.last[:content]), messages, schema: schema)
     end
   rescue StandardError => e
     capture_llm_exception(e, credential: credential)
     { error: e.message, request_messages: messages }
   end
 
-  def build_chat(context, model:, messages:, schema: nil, tools: [])
-    chat = context.chat(model: model)
+  def build_chat(context, model:, messages:, **request)
+    tools = request.fetch(:tools, [])
+    options = Captain::ResponsesConfig.options(model: model, temperature: nil, feature: request[:feature])
+    chat = context.chat(model: model, **options.slice(:protocol))
+    chat.with_thinking(**options[:thinking]) if options[:thinking]
     system_msg = messages.find { |m| m[:role] == 'system' }
     chat.with_instructions(system_msg[:content]) if system_msg
-    chat.with_schema(schema) if schema
+    chat.with_schema(request[:schema]) if request[:schema]
 
     if tools.any?
-      tools.each { |tool| chat = chat.with_tool(tool) }
-      chat.on_end_message { |message| record_generation(chat, message, model) }
+      tools.each { |tool| chat = chat.with_tools(tool) }
+      chat.after_message { |message| record_generation(chat, message, model) }
     end
 
     chat
@@ -103,19 +108,20 @@ class Captain::BaseTaskService
     end
   end
 
-  def build_ruby_llm_response(response, messages)
+  def build_ruby_llm_response(response, messages, schema: nil)
     {
-      message: response.content,
+      message: schema ? response.parsed : response.content,
       usage: {
-        'prompt_tokens' => response.input_tokens,
-        'completion_tokens' => response.output_tokens,
-        'total_tokens' => (response.input_tokens || 0) + (response.output_tokens || 0)
-      },
+        'prompt_tokens' => response.tokens.input,
+        'completion_tokens' => response.tokens.output,
+        'total_tokens' => (response.tokens.input || 0) + (response.tokens.output || 0),
+        'reasoning_tokens' => response.tokens.thinking
+      }.compact,
       request_messages: messages
     }
   end
 
-  def build_instrumentation_params(model, messages)
+  def build_instrumentation_params(model, messages, feature: nil)
     {
       span_name: "llm.#{event_name}",
       account_id: account.id,
@@ -124,7 +130,7 @@ class Captain::BaseTaskService
       model: model,
       messages: messages,
       temperature: nil,
-      metadata: instrumentation_metadata
+      metadata: instrumentation_metadata.merge(Captain::ResponsesConfig.request_metadata(model: model, feature: feature))
     }
   end
 
@@ -165,48 +171,6 @@ class Captain::BaseTaskService
   # participates in the quota system in neither direction.
   def counts_toward_usage?
     llm_credential&.dig(:source) != :hook
-  end
-
-  def api_key_configured?(provider: nil) = llm_credential(provider: provider).present?
-
-  def api_key
-    llm_credential&.dig(:api_key)
-  end
-
-  def llm_credential(provider: nil)
-    if provider.to_s == Llm::Config::OPENROUTER_PROVIDER
-      openrouter_llm_credential
-    elsif use_account_openai_hook?
-      hook_llm_credential || system_llm_credential
-    else
-      system_llm_credential
-    end
-  end
-
-  def use_account_openai_hook?
-    false
-  end
-
-  def hook_llm_credential
-    key = openai_hook&.settings&.dig('api_key').presence
-    { api_key: key, source: :hook } if key
-  end
-
-  def system_llm_credential
-    { api_key: system_api_key, source: :system } if system_api_key.present?
-  end
-
-  def openrouter_llm_credential
-    key = Llm::Config.provider_api_key(Llm::Config::OPENROUTER_PROVIDER)
-    { api_key: key, source: :system } if key.present?
-  end
-
-  def openai_hook
-    @openai_hook ||= account.hooks.find_by(app_id: 'openai', status: 'enabled')
-  end
-
-  def system_api_key
-    @system_api_key ||= Llm::Config.system_api_key
   end
 
   def exception_tracking_account

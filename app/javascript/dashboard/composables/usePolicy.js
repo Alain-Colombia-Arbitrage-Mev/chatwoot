@@ -6,14 +6,17 @@ import {
   getUserPermissions,
   hasPermissions,
 } from 'dashboard/helper/permissionsHelper';
-import { FEATURE_FLAGS, PREMIUM_FEATURES } from 'dashboard/featureFlags';
+import {
+  CLOUD_PAYWALLED_FEATURES,
+  FEATURE_FLAGS,
+  PREMIUM_FEATURES,
+} from 'dashboard/featureFlags';
 
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
 
 const SELF_HOSTED_CAPTAIN_FEATURES = [
   FEATURE_FLAGS.CAPTAIN,
   FEATURE_FLAGS.CAPTAIN_CUSTOM_TOOLS,
-  FEATURE_FLAGS.CAPTAIN_V2,
   FEATURE_FLAGS.CAPTAIN_TASKS,
   FEATURE_FLAGS.CAPTAIN_DOCUMENT_AUTO_SYNC,
 ];
@@ -58,6 +61,9 @@ export function usePolicy() {
     return true;
   };
 
+  const isCloudPaywalledFeature = featureFlag =>
+    CLOUD_PAYWALLED_FEATURES.includes(featureFlag);
+
   const isPremiumFeature = featureFlag => {
     if (!featureFlag) return true;
     return PREMIUM_FEATURES.includes(featureFlag);
@@ -97,7 +103,11 @@ export function usePolicy() {
     // or if the feature is a premium one like SLA to show a paywall
     // the paywall should be managed by the individual component
     if (isOnChatwootCloud.value) {
-      return isFeatureFlagEnabled(flag) || isPremiumFeature(flag);
+      return (
+        isFeatureFlagEnabled(flag) ||
+        isPremiumFeature(flag) ||
+        isCloudPaywalledFeature(flag)
+      );
     }
 
     if (isEnterprise) {
@@ -127,6 +137,10 @@ export function usePolicy() {
     if (isACustomBrandedInstance.value) {
       // custom branded instances never show paywall
       return false;
+    }
+
+    if (isCloudPaywalledFeature(flag)) {
+      return isOnChatwootCloud.value && !isFeatureFlagEnabled(flag);
     }
 
     if (isPremiumFeature(flag)) {
