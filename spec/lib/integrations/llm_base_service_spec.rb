@@ -8,7 +8,7 @@ RSpec.describe Integrations::LlmBaseService do
   let(:event) { { 'name' => 'summarize', 'data' => { 'conversation_display_id' => conversation.display_id } } }
   let(:service) { described_class.new(hook: hook, event: event) }
   let(:error) { StandardError.new('API Error') }
-  let(:body) { { model: 'gpt-4', messages: [{ role: 'user', content: 'Hello' }] }.to_json }
+  let(:body) { { model: 'gpt-6-luna', messages: [{ role: 'user', content: 'Hello' }] }.to_json }
 
   before do
     InstallationConfig.where(name: %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPENROUTER_API_KEY CAPTAIN_OPEN_AI_ENDPOINT]).destroy_all
@@ -41,7 +41,8 @@ RSpec.describe Integrations::LlmBaseService do
       openrouter_body = { model: 'upstage/solar-pro4', messages: [{ role: 'user', content: 'Hello' }] }.to_json
       mock_context = instance_double(RubyLLM::Context)
       mock_chat = instance_double(RubyLLM::Chat)
-      mock_response = instance_double(RubyLLM::Message, content: 'Draft reply', input_tokens: 3, output_tokens: 4)
+      mock_tokens = instance_double(RubyLLM::Tokens, input: 3, output: 4)
+      mock_response = instance_double(RubyLLM::Message, content: 'Draft reply', tokens: mock_tokens)
 
       expect(Llm::Config).to receive(:with_api_key)
         .with('openrouter-key', api_base: anything, provider: 'openrouter')

@@ -41,6 +41,7 @@ describe Whatsapp::SendOnWhatsappService do
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
           to: '123456789',
+          messaging_account_id: '123456789',
           type: 'template',
           template: {
             name: 'ticket_status_updated',
@@ -393,6 +394,74 @@ describe Whatsapp::SendOnWhatsappService do
               type: 'template'
             }.to_json
           ).to_return(status: 200, body: success_response, headers: { 'content-type' => 'application/json' })
+      end
+    end
+
+    context 'when a contact information template becomes ineligible before delivery' do
+      let(:request_template) do
+        {
+          'name' => 'request_contact_info',
+          'status' => 'APPROVED',
+          'language' => 'en_US',
+          'components' => [
+            { 'type' => 'BODY', 'text' => 'Would you like to share your phone number with us?' },
+            { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'REQUEST_CONTACT_INFO' }] }
+          ]
+        }
+      end
+      let(:whatsapp_channel) do
+        create(
+          :channel_whatsapp,
+          provider: 'whatsapp_cloud',
+          message_templates: [request_template],
+          sync_templates: false,
+          validate_provider_config: false
+        )
+      end
+      let(:inbox) { whatsapp_channel.inbox }
+      let(:contact) { create(:contact, account: inbox.account, phone_number: nil) }
+      let(:contact_inbox) do
+        create(:contact_inbox, inbox: inbox, contact: contact, source_id: 'AE.2109889333218546')
+      end
+      let(:conversation) do
+        create(:conversation, account: inbox.account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)
+      end
+
+      it 'marks the message failed when another request is already pending' do
+        previous_conversation = create(
+          :conversation, account: inbox.account, inbox: inbox, contact: contact, contact_inbox: contact_inbox, status: :resolved
+        )
+        create(
+          :message,
+          account: inbox.account,
+          inbox: inbox,
+          conversation: previous_conversation,
+          message_type: :outgoing,
+          status: :sent,
+          content_attributes: { whatsapp_contact_info: { type: 'request', state: 'pending' } }
+        )
+        message = create(
+          :message,
+          account: inbox.account,
+          inbox: inbox,
+          conversation: conversation,
+          message_type: :outgoing,
+          additional_attributes: {
+            template_params: {
+              name: request_template['name'],
+              language: request_template['language'],
+              processed_params: {}
+            }
+          }
+        )
+        expect(Whatsapp::TemplateProcessorService).not_to receive(:new)
+
+        expect { described_class.new(message: message).perform }.not_to raise_error
+
+        expect(message.reload).to have_attributes(
+          status: 'failed',
+          external_error: I18n.t('errors.whatsapp.contact_info_request.pending_request')
+        )
       end
     end
 

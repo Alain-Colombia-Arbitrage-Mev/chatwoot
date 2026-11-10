@@ -1,7 +1,7 @@
 require 'ruby_llm'
 
 module Llm::Config
-  DEFAULT_MODEL = 'gpt-4.1-mini'.freeze
+  DEFAULT_MODEL = 'gpt-6-luna'.freeze
   DEFAULT_OPENAI_ENDPOINT = 'https://api.openai.com'.freeze
   OPENROUTER_PROVIDER = 'openrouter'.freeze
 
@@ -68,9 +68,9 @@ module Llm::Config
       RubyLLM.configure do |config|
         config.openai_api_key = system_api_key if system_api_key.present?
         config.openai_api_base = api_base_for(openai_endpoint) if openai_endpoint.present?
-        config.openrouter_api_key = openrouter_api_key if openrouter_api_key.present?
-        config.openrouter_api_base = openrouter_api_base if openrouter_api_base.present?
+        configure_openrouter_provider(config, api_key: nil, api_base: openai_endpoint, provider: nil)
         config.model_registry_file = Rails.root.join('config/llm_models.json').to_s
+        config.openai_protocol = :chat_completions
         config.logger = Rails.logger
       end
     end

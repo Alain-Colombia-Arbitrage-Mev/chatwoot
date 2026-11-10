@@ -18,7 +18,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       messaging_product: 'whatsapp',
       recipient_type: 'individual', # Only individual messages supported (not group messages)
       # BSUID -> `recipient`; phone number -> `to` (see recipient_params in the base provider).
-      **recipient_params(phone_number),
+      **recipient_params(phone_number), **messaging_account_params,
       type: 'template',
       template: template_body
     }
@@ -132,7 +132,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       body: {
         messaging_product: 'whatsapp',
         context: whatsapp_reply_context(message),
-        **recipient_params(phone_number),
+        **recipient_params(phone_number), **messaging_account_params,
         text: { body: message.outgoing_content },
         type: 'text'
       }.to_json
@@ -152,7 +152,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       body: {
         :messaging_product => 'whatsapp',
         :context => whatsapp_reply_context(message),
-        **recipient_params(phone_number),
+        **recipient_params(phone_number), **messaging_account_params,
         'type' => type,
         type.to_s => type_content
       }.to_json
@@ -186,7 +186,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def build_attachment_content(type, attachment, message)
-    type_content = { 'link' => attachment.download_url }
+    # Referencing uploaded media by id avoids Meta's fwdproxy download, which is rate limited per ASN (error 131053).
+    type_content = Whatsapp::MediaUploadService.new(whatsapp_channel, attachment).perform || { 'link' => attachment.download_url }
     type_content['caption'] = message.outgoing_content unless %w[audio sticker].include?(type)
     type_content['filename'] = attachment.file.filename if type == 'document'
     type_content['voice'] = true if voice_message?(type, attachment)
@@ -247,7 +248,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       headers: api_headers,
       body: {
         messaging_product: 'whatsapp',
-        **recipient_params(phone_number),
+        **recipient_params(phone_number), **messaging_account_params,
         interactive: payload,
         type: 'interactive'
       }.to_json

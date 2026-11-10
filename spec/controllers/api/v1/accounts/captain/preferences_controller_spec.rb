@@ -51,7 +51,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       end
 
       it 'returns effective model provider and source for each feature' do
-        account.update!(captain_models: { 'editor' => 'gpt-4.1' })
+        account.update!(captain_models: { 'editor' => 'gpt-5.1' })
 
         get "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
@@ -59,15 +59,15 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json_response.dig(:features, :editor)).to include(
-          model: 'gpt-4.1',
-          selected: 'gpt-4.1',
+          model: 'gpt-5.1',
+          selected: 'gpt-5.1',
           provider: 'openai',
           source: 'account_override'
         )
-        expect(json_response.dig(:features, :label_suggestion)).to include(
-          model: Llm::Models.default_model_for('label_suggestion'),
-          selected: Llm::Models.default_model_for('label_suggestion'),
-          provider: 'openrouter',
+        expect(json_response.dig(:features, :help_center_query_translation)).to include(
+          model: Llm::Models.default_model_for('help_center_query_translation'),
+          selected: Llm::Models.default_model_for('help_center_query_translation'),
+          provider: 'openai',
           source: 'default'
         )
       end
@@ -114,8 +114,8 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         )
       end
 
-      it 'returns the Captain V2 assistant model as the assistant default for V2 accounts' do
-        account.enable_features!('captain_integration_v2')
+      it 'returns the Captain V2 assistant model as the assistant default for Captain accounts' do
+        account.enable_features!('captain_integration')
 
         get "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
@@ -130,7 +130,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       end
 
       it 'keeps the V2 assistant default when an account override is selected' do
-        account.enable_features!('captain_integration_v2')
+        account.enable_features!('captain_integration')
         account.update!(captain_models: { 'assistant' => 'gpt-5.1' })
 
         get "/api/v1/accounts/#{account.id}/captain/preferences",
@@ -151,7 +151,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
-            params: { captain_models: { editor: 'gpt-4.1-mini' } },
+            params: { captain_models: { editor: 'gpt-5-mini' } },
             as: :json
 
         expect(response).to have_http_status(:unauthorized)
@@ -162,7 +162,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       it 'returns forbidden' do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: agent.create_new_auth_token,
-            params: { captain_models: { editor: 'gpt-4.1-mini' } },
+            params: { captain_models: { editor: 'gpt-5-mini' } },
             as: :json
 
         expect(response).to have_http_status(:unauthorized)
@@ -173,14 +173,14 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       it 'updates captain_models' do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
-            params: { captain_models: { editor: 'gpt-4.1-mini' } },
+            params: { captain_models: { editor: 'gpt-5-mini' } },
             as: :json
 
         expect(response).to have_http_status(:success)
         expect(json_response).to have_key(:providers)
         expect(json_response).to have_key(:models)
         expect(json_response).to have_key(:features)
-        expect(account.reload.captain_models['editor']).to eq('gpt-4.1-mini')
+        expect(account.reload.captain_models['editor']).to eq('gpt-5-mini')
       end
 
       it 'does not persist unknown or internal captain model feature keys' do
@@ -188,15 +188,15 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
             headers: admin.create_new_auth_token,
             params: {
               captain_models: {
-                editor: 'gpt-4.1-mini',
-                unknown_feature: 'gpt-4.1',
-                conversation_completion: 'gpt-4.1'
+                editor: 'gpt-5-mini',
+                unknown_feature: 'gpt-5.1',
+                conversation_completion: 'gpt-5.1'
               }
             },
             as: :json
 
         expect(response).to have_http_status(:success)
-        expect(account.reload.captain_models).to eq('editor' => 'gpt-4.1-mini')
+        expect(account.reload.captain_models).to eq('editor' => 'gpt-5-mini')
         expect(json_response[:features]).not_to have_key(:conversation_completion)
         expect(json_response[:features]).to have_key(:reply_suggestion)
       end
@@ -204,16 +204,16 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       it 'rejects invalid captain model values for the feature' do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
-            params: { captain_models: { label_suggestion: 'gpt-5.1' } },
+            params: { captain_models: { help_center_query_translation: 'gpt-5.1' } },
             as: :json
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json_response[:message]).to include('not a valid model for label_suggestion')
+        expect(json_response[:message]).to include('not a valid model for help_center_query_translation')
         expect(account.reload.captain_models).to be_nil
       end
 
       it 'removes blank captain model overrides' do
-        account.update!(captain_models: { 'editor' => 'gpt-4.1' })
+        account.update!(captain_models: { 'editor' => 'gpt-5.1' })
 
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
@@ -242,12 +242,12 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       it 'updates captain_models for conversation FAQ generation' do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
-            params: { captain_models: { conversation_faq_generation: 'gpt-4.1-mini' } },
+            params: { captain_models: { conversation_faq_generation: 'gpt-5-mini' } },
             as: :json
 
         expect(response).to have_http_status(:success)
-        expect(json_response.dig(:features, :conversation_faq_generation, :selected)).to eq('gpt-4.1-mini')
-        expect(account.reload.captain_models['conversation_faq_generation']).to eq('gpt-4.1-mini')
+        expect(json_response.dig(:features, :conversation_faq_generation, :selected)).to eq('gpt-5-mini')
+        expect(account.reload.captain_models['conversation_faq_generation']).to eq('gpt-5-mini')
       end
 
       it 'updates captain_models for PDF FAQ generation' do
@@ -264,17 +264,17 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       it 'updates captain_models for reply suggestions' do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
-            params: { captain_models: { reply_suggestion: 'gpt-4.1-mini' } },
+            params: { captain_models: { reply_suggestion: 'gpt-5-mini' } },
             as: :json
 
         expect(response).to have_http_status(:success)
         expect(json_response.dig(:features, :reply_suggestion)).to include(
-          selected: 'gpt-4.1-mini',
+          selected: 'gpt-5-mini',
           provider: 'openai',
           source: 'account_override'
         )
         expect(account.reload.captain_models['reply_suggestion']).to eq(
-          'gpt-4.1-mini'
+          'gpt-5-mini'
         )
       end
 
@@ -292,16 +292,11 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
       end
 
       it 'merges with existing captain_models' do
-        account.update!(
-          captain_models: {
-            'editor' => 'gpt-4.1-mini',
-            'assistant' => 'gpt-5.1'
-          }
-        )
+        account.update!(captain_models: { 'editor' => 'gpt-5-mini', 'assistant' => 'gpt-5.1' })
 
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
-            params: { captain_models: { editor: 'gpt-4.1' } },
+            params: { captain_models: { editor: 'gpt-5.1' } },
             as: :json
 
         expect(response).to have_http_status(:success)
@@ -309,7 +304,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(json_response).to have_key(:models)
         expect(json_response).to have_key(:features)
         models = account.reload.captain_models
-        expect(models['editor']).to eq('gpt-4.1')
+        expect(models['editor']).to eq('gpt-5.1')
         expect(models['assistant']).to eq('gpt-5.1') # Preserved
       end
 
@@ -334,7 +329,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         put "/api/v1/accounts/#{account.id}/captain/preferences",
             headers: admin.create_new_auth_token,
             params: {
-              captain_models: { editor: 'gpt-4.1-mini' },
+              captain_models: { editor: 'gpt-5-mini' },
               captain_features: { editor: true }
             },
             as: :json
@@ -344,7 +339,7 @@ RSpec.describe 'Api::V1::Accounts::Captain::Preferences', type: :request do
         expect(json_response).to have_key(:models)
         expect(json_response).to have_key(:features)
         account.reload
-        expect(account.captain_models['editor']).to eq('gpt-4.1-mini')
+        expect(account.captain_models['editor']).to eq('gpt-5-mini')
         expect(account.captain_features['editor']).to be true
       end
     end

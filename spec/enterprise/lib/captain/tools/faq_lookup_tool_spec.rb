@@ -22,12 +22,13 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
     end
   end
 
-  describe '#parameters' do
+  describe '#parameters_schema' do
     it 'returns the correct parameters' do
-      expect(tool.parameters).to have_key(:query)
-      expect(tool.parameters[:query].name).to eq(:query)
-      expect(tool.parameters[:query].type).to eq('string')
-      expect(tool.parameters[:query].description).to eq('The question or topic to search for in the FAQ database')
+      properties = tool.parameters_schema.fetch('properties')
+
+      expect(properties).to have_key('query')
+      expect(properties['query']['type']).to eq('string')
+      expect(properties['query']['description']).to eq('The question or topic to search for in the FAQ database')
     end
   end
 
@@ -125,7 +126,7 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
       end
 
       it 'logs tool usage for search' do
-        expect(tool).to receive(:log_tool_usage).with('searching', { query: 'password reset' })
+        expect(tool).to receive(:log_tool_usage).with('searching', { query_length: 'password reset'.length })
         expect(tool).to receive(:log_tool_usage).with('found_results', { query: 'password reset', count: 2 })
 
         tool.perform(tool_context, query: 'password reset')
@@ -163,12 +164,12 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
 
       it 'returns no results message' do
         result = tool.perform(tool_context, query: 'nonexistent topic')
-        expect(result).to eq('No relevant FAQs found for: nonexistent topic')
+        expect(result).to start_with('No verified FAQ or RAG memory was found for this query.')
       end
 
       it 'logs tool usage for no results' do
-        expect(tool).to receive(:log_tool_usage).with('searching', { query: 'nonexistent topic' })
-        expect(tool).to receive(:log_tool_usage).with('no_results', { query: 'nonexistent topic' })
+        expect(tool).to receive(:log_tool_usage).with('searching', { query_length: 'nonexistent topic'.length })
+        expect(tool).to receive(:log_tool_usage).with('no_results', { query_length: 'nonexistent topic'.length })
 
         tool.perform(tool_context, query: 'nonexistent topic')
       end
@@ -186,7 +187,7 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
         allow(Captain::AssistantResponse).to receive(:nearest_neighbors).and_return(Captain::AssistantResponse.none)
 
         result = tool.perform(tool_context, query: '')
-        expect(result).to eq('No relevant FAQs found for: ')
+        expect(result).to start_with('No verified FAQ or RAG memory was found for this query.')
       end
     end
   end
